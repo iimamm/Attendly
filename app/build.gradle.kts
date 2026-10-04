@@ -14,6 +14,21 @@ if (localPropertiesFile.exists()) {
 }
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
+val keystoreFile = rootProject.file("key/apps_base_key.jks")
+val keystoreProperties: Map<String, String> = run {
+    val propsFile = rootProject.file("key/key_properties.txt")
+    if (propsFile.exists()) {
+        propsFile.readLines()
+            .filter { it.contains(':') }
+            .associate { line ->
+                val sep = line.indexOf(':')
+                line.substring(0, sep).trim().lowercase() to line.substring(sep + 1).trim()
+            }
+    } else {
+        emptyMap()
+    }
+}
+
 android {
     namespace = "com.appsbase.attendly"
     compileSdk = 36
@@ -31,13 +46,26 @@ android {
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
+    signingConfigs {
+        if (keystoreFile.exists() && keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = keystoreProperties["key_store_password"]
+                keyAlias = keystoreProperties["key_alias"]
+                keyPassword = keystoreProperties["key_password"]
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

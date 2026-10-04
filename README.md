@@ -113,10 +113,18 @@ Later passes continued the same loop: the screen was split into per-widget compo
    | `ValidateAttendanceEligibilityUseCaseTest` | 7 | Full eligibility matrix (unset office, already marked, out of range, out of hours, bypass, eligible) |
    | `AttendanceViewModelTest` | 8 | MVI intent→state transitions: permissions, GPS disabled/re-enabled refresh, pause/resume tracking, map targeting, save office, mark attendance, simulation toggle, reset |
 
-5. **Build a release APK** (output: `app/build/outputs/apk/release/`):
+5. **Build a release APK** (minified, resource-shrunk, and signed when the key is present — output: `app/build/outputs/apk/release/`):
    ```bash
    ./gradlew assembleRelease
    ```
+
+   **Release signing.** The signing key lives in the git-ignored `key/` folder: `apps_base_key.jks` (the keystore) and `key_properties.txt` (credentials, one per line, in the `key_store_password:` / `key_alias:` / `key_password:` format). The build script finds the folder and signs the APK automatically. On a machine without it — say, a fresh clone or CI — the release build still succeeds, it just produces an unsigned APK. To confirm an APK carries the project signature:
+
+   ```bash
+   apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+   ```
+
+   The printed certificate should match the one `keytool -list -keystore key/apps_base_key.jks` reports. Keep the `key/` folder backed up somewhere safe; it is deliberately never committed to the repository.
 
 **Troubleshooting.** A blank or beige map usually means the Maps key is missing from `local.properties` or the device has no network. An amber *GPS is Disabled* banner means device location services are off — tap **Enable GPS** or enable location in quick settings. The distance stays `—` until the first GPS fix arrives, so grant location permission when prompted.
 

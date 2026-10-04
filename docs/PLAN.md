@@ -23,6 +23,7 @@ This document is the executable plan the project was built from, updated to matc
 - Reactive only: `StateFlow` / `SharedFlow` + Kotlin Flow (no LiveData, no callbacks).
 - Time and clock access only through the injected `TimeProvider`.
 - Core library desugaring enabled, so `java.time` is available on all supported API levels (24+).
+- Release APKs are minified and signed from the git-ignored `key/` folder when present; without it, the release build is simply unsigned (see [Release signing](#release-signing) below).
 
 ## Architecture blueprint
 
@@ -155,6 +156,17 @@ Each of these was reviewed, recompiled, re-tested, and verified on the emulator 
 | `7426673` | Split the screen into per-widget component files: top bar, guidance banners, mark-attendance section. |
 | `932ddc3` | Made location tracking lifecycle-aware: GPS collection pauses on ON_STOP and resumes on ON_RESUME. |
 | `3736b0c` | Annotated the UI state and the models it holds with `@Stable` so Compose can skip recomposition. |
+
+## Release signing
+
+The release build type is minified (`isMinifyEnabled` + `isShrinkResources`; no project-specific keep rules were needed — every dependency in use ships its own consumer rules) and signed with a project keystore that never enters version control:
+
+- `key/apps_base_key.jks` — the keystore.
+- `key/key_properties.txt` — credentials, one per line: `key_store_password:`, `key_alias:`, `key_password:`.
+
+`app/build.gradle.kts` parses that file when it exists and creates the `release` signing config from it. The whole `/key/` folder sits in `.gitignore`, so the credentials never reach the repository. If the folder is absent (fresh clone, CI), the release build still succeeds — it just produces an unsigned APK.
+
+Verified end to end: `./gradlew assembleRelease` produces a ~1.7 MB `app-release.apk` whose `apksigner verify --print-certs` certificate matches the keystore's `keytool -list` fingerprint; that APK was installed and run on an emulator with no minification-related issues.
 
 ## Definition of Done
 
