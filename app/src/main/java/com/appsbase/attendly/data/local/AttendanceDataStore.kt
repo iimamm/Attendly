@@ -30,7 +30,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "at
 @Singleton
 class AttendanceDataStore @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
     private val dataStore = context.dataStore
 
