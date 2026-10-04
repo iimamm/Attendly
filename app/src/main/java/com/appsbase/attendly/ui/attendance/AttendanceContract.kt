@@ -1,11 +1,13 @@
 package com.appsbase.attendly.ui.attendance
 
+import androidx.compose.runtime.Stable
 import com.appsbase.attendly.domain.model.AttendanceRecord
 import com.appsbase.attendly.domain.model.AttendanceStatus
 import com.appsbase.attendly.domain.model.LocationModel
 import com.appsbase.attendly.domain.model.OfficeLocation
 import com.appsbase.attendly.domain.model.SimulationConfig
 
+@Stable
 data class AttendanceState(
     val currentLocation: LocationModel? = null,
     val officeLocation: OfficeLocation? = null,
