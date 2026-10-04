@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
@@ -77,21 +78,26 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appsbase.attendly.R
+import com.appsbase.attendly.domain.model.AttendanceRecord
 import com.appsbase.attendly.domain.model.AttendanceStatus
 import com.appsbase.attendly.domain.model.LocationModel
+import com.appsbase.attendly.domain.model.OfficeLocation
 import com.appsbase.attendly.domain.util.GeoFenceCalculator
 import com.appsbase.attendly.ui.attendance.components.AttendanceHistoryBottomSheet
 import com.appsbase.attendly.ui.attendance.components.ResetConfirmationDialog
+import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.DangerContainer
 import com.appsbase.attendly.ui.theme.DangerRed
 import com.appsbase.attendly.ui.theme.DisabledButton
@@ -119,13 +125,13 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.flow.collectLatest
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val DefaultLocation = LatLng(23.8103, 90.4125)
 private const val DefaultZoom = 17f
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     viewModel: AttendanceViewModel = hiltViewModel()
@@ -133,7 +139,6 @@ fun AttendanceScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -214,22 +219,52 @@ fun AttendanceScreen(
         }
     }
 
+    AttendanceContent(
+        state = state,
+        cameraPositionState = cameraPositionState,
+        snackbarHostState = snackbarHostState,
+        onBack = { (context as? Activity)?.finish() },
+        onIntent = viewModel::onIntent,
+        onRequestPermission = {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttendanceContent(
+    state: AttendanceState,
+    cameraPositionState: CameraPositionState,
+    snackbarHostState: SnackbarHostState,
+    onBack: () -> Unit,
+    onIntent: (AttendanceIntent) -> Unit,
+    onRequestPermission: () -> Unit
+) {
+    val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.app_name),
+                        text = stringResource(R.string.title_attendance),
                         color = TitleNavy,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { (context as? Activity)?.finish() }) {
+                    IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
                             contentDescription = stringResource(R.string.back)
                         )
                     }
@@ -248,14 +283,10 @@ fun AttendanceScreen(
                         expanded = showMenu,
                         onDismiss = { showMenu = false },
                         state = state,
-                        onToggleSimulation = {
-                            viewModel.onIntent(AttendanceIntent.ToggleTimeSimulation)
-                        },
-                        onShowHistory = {
-                            viewModel.onIntent(AttendanceIntent.ShowHistorySheet(true))
-                        },
+                        onToggleSimulation = { onIntent(AttendanceIntent.ToggleTimeSimulation) },
+                        onShowHistory = { onIntent(AttendanceIntent.ShowHistorySheet(true)) },
                         onShowResetDialog = {
-                            viewModel.onIntent(AttendanceIntent.ShowResetConfirmDialog(true))
+                            onIntent(AttendanceIntent.ShowResetConfirmDialog(true))
                         }
                     )
                 },
@@ -280,14 +311,7 @@ fun AttendanceScreen(
                     titleRes = R.string.permission_required_title,
                     messageRes = R.string.permission_required_message,
                     actionLabelRes = R.string.permission_grant_btn,
-                    onAction = {
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        )
-                    }
+                    onAction = onRequestPermission
                 )
                 Spacer(Modifier.height(20.dp))
             }
@@ -308,12 +332,8 @@ fun AttendanceScreen(
             OfficeContextCard(
                 state = state,
                 cameraPositionState = cameraPositionState,
-                onSaveOfficeLocation = {
-                    viewModel.onIntent(AttendanceIntent.SaveOfficeLocationClicked)
-                },
-                onCenterOnMyLocation = {
-                    viewModel.onIntent(AttendanceIntent.CenterMapOnCurrentLocation)
-                }
+                onSaveOfficeLocation = { onIntent(AttendanceIntent.SaveOfficeLocationClicked) },
+                onCenterOnMyLocation = { onIntent(AttendanceIntent.CenterMapOnCurrentLocation) }
             )
 
             Spacer(Modifier.height(28.dp))
@@ -335,26 +355,22 @@ fun AttendanceScreen(
 
             MarkAttendanceSection(
                 state = state,
-                onMarkAttendance = {
-                    viewModel.onIntent(AttendanceIntent.MarkAttendanceClicked)
-                }
+                onMarkAttendance = { onIntent(AttendanceIntent.MarkAttendanceClicked) }
             )
         }
     }
 
     if (state.showResetConfirmDialog) {
         ResetConfirmationDialog(
-            onConfirm = { viewModel.onIntent(AttendanceIntent.ConfirmResetAll) },
-            onDismiss = {
-                viewModel.onIntent(AttendanceIntent.ShowResetConfirmDialog(false))
-            }
+            onConfirm = { onIntent(AttendanceIntent.ConfirmResetAll) },
+            onDismiss = { onIntent(AttendanceIntent.ShowResetConfirmDialog(false)) }
         )
     }
 
     if (state.showHistorySheet) {
         AttendanceHistoryBottomSheet(
             history = state.attendanceHistory,
-            onDismiss = { viewModel.onIntent(AttendanceIntent.ShowHistorySheet(false)) }
+            onDismiss = { onIntent(AttendanceIntent.ShowHistorySheet(false)) }
         )
     }
 }
@@ -618,31 +634,40 @@ private fun OfficeMap(
             .height(150.dp)
             .clip(RoundedCornerShape(16.dp))
     ) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = state.hasLocationPermission),
-            uiSettings = MapUiSettings(
-                myLocationButtonEnabled = false,
-                zoomControlsEnabled = false,
-                compassEnabled = true
+        if (LocalInspectionMode.current) {
+            // Static placeholder — GoogleMap needs a running Play Services process.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(TrackGrey.copy(alpha = 0.35f))
             )
-        ) {
-            state.officeLocation?.let { office ->
-                Circle(
-                    center = LatLng(office.latitude, office.longitude),
-                    radius = GeoFenceCalculator.GEOFENCE_RADIUS_METERS,
-                    strokeColor = PrimaryBlue,
-                    strokeWidth = 3f,
-                    fillColor = PrimaryBlue.copy(alpha = 0.18f)
+        } else {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                properties = MapProperties(isMyLocationEnabled = state.hasLocationPermission),
+                uiSettings = MapUiSettings(
+                    myLocationButtonEnabled = false,
+                    zoomControlsEnabled = false,
+                    compassEnabled = true
                 )
-                Marker(
-                    state = MarkerState(
-                        position = LatLng(office.latitude, office.longitude)
-                    ),
-                    title = stringResource(R.string.office_marker_title),
-                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                )
+            ) {
+                state.officeLocation?.let { office ->
+                    Circle(
+                        center = LatLng(office.latitude, office.longitude),
+                        radius = GeoFenceCalculator.GEOFENCE_RADIUS_METERS,
+                        strokeColor = PrimaryBlue,
+                        strokeWidth = 3f,
+                        fillColor = PrimaryBlue.copy(alpha = 0.18f)
+                    )
+                    Marker(
+                        state = MarkerState(
+                            position = LatLng(office.latitude, office.longitude)
+                        ),
+                        title = stringResource(R.string.office_marker_title),
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                    )
+                }
             }
         }
 
@@ -671,41 +696,48 @@ private fun OfficeMap(
             )
         }
 
-        val target = state.targetOfficeLocation
-        Surface(
-            shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp,
+        CoordinatesPill(
+            location = state.targetOfficeLocation,
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(10.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 18.dp)
+        )
+    }
+}
+
+@Composable
+private fun CoordinatesPill(
+    location: LocationModel?,
+    modifier: Modifier = Modifier
+) {
+    val target = location ?: LocationModel(0.0, 0.0)
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.LocationOn,
-                    contentDescription = null,
-                    tint = PrimaryBlue,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = if (target != null) {
-                        stringResource(
-                            R.string.target_coords_format,
-                            target.latitude,
-                            target.longitude
-                        )
-                    } else {
-                        stringResource(R.string.target_coords_format, 0.0, 0.0)
-                    },
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Icon(
+                imageVector = Icons.Outlined.LocationOn,
+                contentDescription = null,
+                tint = PrimaryBlue,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = stringResource(
+                    R.string.target_coords_format,
+                    target.latitude,
+                    target.longitude
+                ),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -721,7 +753,7 @@ private fun DistanceRing(distanceMeters: Int?, inRange: Boolean) {
 
     Box(
         modifier = Modifier
-            .size(176.dp)
+            .size(166.dp)
             .background(
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                 CircleShape
@@ -784,7 +816,7 @@ private fun RangeStatusChip(state: AttendanceState) {
         modifier = Modifier
             .clip(CircleShape)
             .background(bg)
-            .padding(horizontal = 18.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -851,7 +883,9 @@ private fun MarkAttendanceSection(
         isEligible -> PrimaryBlue
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val dashColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+    // No fill: the section floats on the screen background, so the dashed
+    // border carries the shape and needs a stronger tone than the theme outline.
+    val dashColor = LabelGrey.copy(alpha = 0.5f)
 
     Column(
         modifier = Modifier
@@ -866,10 +900,6 @@ private fun MarkAttendanceSection(
                     )
                 )
             }
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                RoundedCornerShape(24.dp)
-            )
             .padding(horizontal = 20.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -951,3 +981,107 @@ private fun formatTime(epochMillis: Long): String =
     Instant.ofEpochMilli(epochMillis)
         .atZone(ZoneId.systemDefault())
         .format(DateTimeFormatter.ofPattern("hh:mm a"))
+
+// ---------- Previews: the four attendance cases ----------
+
+private fun previewState(
+    officeLocation: OfficeLocation?,
+    currentLocation: LocationModel,
+    distanceMeters: Int?,
+    eligibilityStatus: AttendanceStatus,
+    isWithinGeofence: Boolean,
+    todayAttendance: AttendanceRecord? = null
+): AttendanceState = AttendanceState(
+    currentLocation = currentLocation,
+    officeLocation = officeLocation,
+    targetOfficeLocation = currentLocation,
+    distanceMeters = distanceMeters,
+    eligibilityStatus = eligibilityStatus,
+    isWithinGeofence = isWithinGeofence,
+    todayAttendance = todayAttendance,
+    checkInWindow = "09:00 AM – 06:00 PM",
+    hasLocationPermission = true,
+    isGpsEnabled = true
+)
+
+@Composable
+private fun AttendanceCasePreview(state: AttendanceState) {
+    AttendlyTheme {
+        AttendanceContent(
+            state = state,
+            cameraPositionState = rememberCameraPositionState {
+                position = CameraPosition.fromLatLngZoom(DefaultLocation, DefaultZoom)
+            },
+            snackbarHostState = remember { SnackbarHostState() },
+            onBack = {},
+            onIntent = {},
+            onRequestPermission = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844, name = "1 — Office unset")
+@Composable
+private fun AttendanceScreenOfficeUnsetPreview() {
+    AttendanceCasePreview(
+        previewState(
+            officeLocation = null,
+            currentLocation = LocationModel(23.8103, 90.4125),
+            distanceMeters = null,
+            eligibilityStatus = AttendanceStatus.OFFICE_NOT_SET,
+            isWithinGeofence = false
+        )
+    )
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844, name = "2 — Set, out of range")
+@Composable
+private fun AttendanceScreenOutOfRangePreview() {
+    AttendanceCasePreview(
+        previewState(
+            officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
+            currentLocation = LocationModel(23.8114, 90.4125),
+            distanceMeters = 120,
+            eligibilityStatus = AttendanceStatus.OUTSIDE_GEOFENCE,
+            isWithinGeofence = false
+        )
+    )
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844, name = "3 — Set, in range (eligible)")
+@Composable
+private fun AttendanceScreenInRangePreview() {
+    AttendanceCasePreview(
+        previewState(
+            officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
+            currentLocation = LocationModel(23.8105, 90.4125),
+            distanceMeters = 22,
+            eligibilityStatus = AttendanceStatus.ELIGIBLE,
+            isWithinGeofence = true
+        )
+    )
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844, name = "4 — Set, marked today")
+@Composable
+private fun AttendanceScreenMarkedTodayPreview() {
+    AttendanceCasePreview(
+        previewState(
+            officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
+            currentLocation = LocationModel(23.8104, 90.4125),
+            distanceMeters = 8,
+            eligibilityStatus = AttendanceStatus.ALREADY_MARKED,
+            isWithinGeofence = true,
+            todayAttendance = AttendanceRecord(
+                id = "preview-record",
+                timestamp = LocalDateTime.of(2026, 10, 4, 10, 30)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli(),
+                latitude = 23.8104,
+                longitude = 90.4125,
+                distanceMeters = 8
+            )
+        )
+    )
+}

@@ -2,6 +2,7 @@
     <string name="app_name">Attendly</string>
 
     <!-- Top bar & overflow menu -->
+    <string name="title_attendance">Attendance</string>
     <string name="back">Back</string>
     <string name="menu_options">Menu options</string>
     <string name="menu_bypass_time">Bypass Working Hours (Simulate)</string>
