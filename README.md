@@ -14,7 +14,7 @@
 - **50-Meter Geofence Enforcement**: Visual circle overlay with dynamic proximity calculations using the Haversine formula.
 - **Real-Time Distance Feedback**: Live updates providing precise distance indicators (e.g., *"You are 120m away from the office"* or *"You are inside the office geofence (22m away)"*).
 - **Time Window Validation**: Enforces check-ins strictly during business hours with clear visual indicators.
-- **Simulation Control Engine**: Built-in 3-dot overflow menu allowing evaluators to bypass working hours for off-hours testing, undo attendance records, view logs, or reset all preferences.
+- **Simulation Control Engine**: Built-in 3-dot overflow menu allowing evaluators to bypass working hours for off-hours testing, view attendance logs, or reset all preferences.
 - **Production Architecture**: Modern Jetpack Compose UI, Layered MVI architecture, Kotlin Flow reactive streams, Dagger Hilt dependency injection, and Jetpack DataStore persistence.
 
 ---
@@ -63,7 +63,7 @@ Attendly adheres to **Clean Architecture** principles and the **Model-View-Inten
 
 ### Key Architectural Classes:
 1. **`AttendanceState`**: An immutable data class representing the single source of truth for the UI—holding current GPS coordinates, saved office coordinates, target drag location, distance in meters, eligibility status, today's attendance record, and simulation flags.
-2. **`AttendanceIntent`**: Sealed interface defining all possible user actions (`SaveOfficeLocationClicked`, `MarkAttendanceClicked`, `MapCameraMoved`, `ToggleTimeSimulation`, `ConfirmUndoAttendance`, `ConfirmResetAll`).
+2. **`AttendanceIntent`**: Sealed interface defining all possible user actions (`SaveOfficeLocationClicked`, `MarkAttendanceClicked`, `MapCameraMoved`, `ToggleTimeSimulation`, `ConfirmResetAll`).
 3. **`AttendanceViewModel`**: The state holder that processes intents, interacts with domain use cases, and publishes the unified state stream (`StateFlow`) and side-effects (`SharedFlow`).
 4. **`AttendanceRepositoryImpl` & `AttendanceDataStore`**: Reactive persistence layer managing local coordinates, attendance logs, and simulation configurations via Kotlin Flow.
 
@@ -144,7 +144,6 @@ Generative AI (Google Antigravity & Gemini) was utilized systematically througho
 
 ### 3. Simulation & Testing Menu (Top Right 3-Dot Icon)
 - **Bypass Working Hours (Simulate)**: Allows evaluators to test attendance marking at any time of day. Displays a bright `SIMULATION MODE` badge on the app bar.
-- **Undo Today's Attendance**: Removes today's check-in record so eligibility and check-in flows can be re-tested immediately.
 - **View Attendance History**: Opens a Material 3 bottom sheet showing all saved attendance timestamps, coordinates, and recorded distances.
 - **Reset Everything**: Clears saved office coordinates, attendance history, and simulation flags back to initial state.
 

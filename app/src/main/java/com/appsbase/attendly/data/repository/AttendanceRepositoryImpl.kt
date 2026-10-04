@@ -55,14 +55,6 @@ class AttendanceRepositoryImpl @Inject constructor(
         return record
     }
 
-    override suspend fun undoTodayAttendance() {
-        val startOfDay = timeProvider.now().toLocalDate()
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-        dataStore.undoTodayAttendance(startOfDay)
-    }
-
     override suspend fun resetAllData() {
         dataStore.clearAll()
     }

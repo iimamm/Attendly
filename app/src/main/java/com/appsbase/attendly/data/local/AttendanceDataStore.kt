@@ -79,16 +79,6 @@ class AttendanceDataStore @Inject constructor(
         }
     }
 
-    suspend fun undoTodayAttendance(startOfDayMillis: Long) {
-        dataStore.edit { prefs ->
-            val currentJson = prefs[KEY_ATTENDANCE_HISTORY] ?: "[]"
-            val currentList = parseAttendanceRecords(currentJson)
-            // Filter out records created today
-            val filtered = currentList.filter { it.timestamp < startOfDayMillis }
-            prefs[KEY_ATTENDANCE_HISTORY] = serializeAttendanceRecords(filtered)
-        }
-    }
-
     val simulationConfigFlow: Flow<SimulationConfig> = dataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception

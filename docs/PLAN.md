@@ -31,7 +31,7 @@ The project adheres to a strict **Unidirectional Data Flow (UDF)** and **Layered
 │     - CalculateDistanceUseCase (Haversine & Android Location)               │
 │     - ValidateGeofenceUseCase (50m threshold check)                         │
 │     - ValidateAttendanceTimeUseCase (Working hours window check)            │
-│     - MarkAttendanceUseCase & UndoAttendanceUseCase                         │
+│     - MarkAttendanceUseCase & SaveOfficeLocationUseCase                     │
 │   • Domain Models: OfficeLocation, AttendanceRecord, GeoFenceStatus,        │
 │     TimeValidationStatus, SimulationConfig                                  │
 │   • Contracts / Interfaces: AttendanceRepository, LocationTracker           │
@@ -54,7 +54,6 @@ The project adheres to a strict **Unidirectional Data Flow (UDF)** and **Layered
 - **Production Engine**: Strict GPS fetching, 50m Haversine distance threshold calculation, strict working-hours validation (e.g., 09:00 AM – 06:00 PM).
 - **Simulation Engine**: Isolated `SimulationManager` / `SimulationRepository` injected into UseCases and ViewModel.
   - Allows bypassing the time window for off-hours evaluation.
-  - Allows undoing today's attendance mark for repeated testing.
   - Allows full reset of local DataStore state.
   - Clear visual indicator ("Simulation Mode Active") when any override is enabled.
 
@@ -95,18 +94,18 @@ The project adheres to a strict **Unidirectional Data Flow (UDF)** and **Layered
 3. **Domain Use Cases & Validators**:
    - `GeoFenceCalculator`: Accurate distance calculation (50m threshold) with distance formatting (meters/km).
    - `TimeValidator`: Working-hours evaluation (e.g., 09:00 - 18:00) with injectable clock for testability.
-   - `SimulationManager`: Separate debug controller handling "Bypass Time", "Undo Attendance", and "Factory Reset".
+   - `SimulationManager`: Separate debug controller handling "Bypass Time" and "Factory Reset".
 4. **Repository Implementation**:
    - `AttendanceRepository` implementing reactive retrieval and atomic updates using Kotlin Flow.
 
 ### Step 3: Presentation Layer (MVI) & Jetpack Compose UI
 1. **MVI Architecture Setup**:
    - Define `AttendanceState`: Current user location, office location, distance in meters, isWithinGeofence, isWithinTimeWindow, isAttendanceMarked, simulation active flag, loading & error states.
-   - Define `AttendanceIntent`: `SetOfficeLocation`, `UpdateOfficeLocation`, `MarkAttendance`, `MapMoved(LatLng)`, `ToggleTimeSimulation`, `UndoAttendance`, `ResetAllData`, `RequestLocationPermission`.
+   - Define `AttendanceIntent`: `SetOfficeLocation`, `UpdateOfficeLocation`, `MarkAttendance`, `MapMoved(LatLng)`, `ToggleTimeSimulation`, `ResetAllData`, `RequestLocationPermission`.
    - Define `AttendanceEffect`: Navigation events, Toast/Snackbar messages, error alerts.
    - Implement `AttendanceViewModel` managing state transitions and business logic triggers.
 2. **AttendanceScreen Composable**:
-   - **Top Section / TopAppBar**: App title and three-dot overflow menu for Simulation actions (Bypass Time, Undo Attendance, View History, Reset All).
+   - **Top Section / TopAppBar**: App title and three-dot overflow menu for Simulation actions (Bypass Time, View History, Reset All).
    - **Interactive Google Map**:
      - Draggable center marker for office targeting.
      - 50-meter radius visual circle overlay around the office location.
@@ -121,7 +120,7 @@ The project adheres to a strict **Unidirectional Data Flow (UDF)** and **Layered
      - Success state showing today's attendance timestamp.
 3. **History Sheet & Simulation Modals**:
    - Modal BottomSheet displaying list of marked attendance records.
-   - Confirmation dialogs for undoing attendance and resetting data.
+   - Confirmation dialog for resetting data.
 
 ### Step 4: Unit Testing, Release Build Verification & Documentation
 1. **Unit Testing**:

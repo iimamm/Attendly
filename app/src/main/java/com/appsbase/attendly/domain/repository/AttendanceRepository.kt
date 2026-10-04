@@ -14,7 +14,6 @@ interface AttendanceRepository {
 
     suspend fun saveOfficeLocation(location: LocationModel)
     suspend fun markAttendance(location: LocationModel, distanceMeters: Int): AttendanceRecord
-    suspend fun undoTodayAttendance()
     suspend fun resetAllData()
     suspend fun setTimeBypassSimulation(enabled: Boolean)
 }

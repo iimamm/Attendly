@@ -23,7 +23,6 @@ data class AttendanceState(
     val isSavingOffice: Boolean = false,
     val showHistorySheet: Boolean = false,
     val showResetConfirmDialog: Boolean = false,
-    val showUndoConfirmDialog: Boolean = false,
     val userFeedbackMessage: String? = null
 )
 
@@ -38,9 +37,7 @@ sealed interface AttendanceIntent {
     data object ToggleTimeSimulation : AttendanceIntent
     data class ShowHistorySheet(val show: Boolean) : AttendanceIntent
     data class ShowResetConfirmDialog(val show: Boolean) : AttendanceIntent
-    data class ShowUndoConfirmDialog(val show: Boolean) : AttendanceIntent
     data object ConfirmResetAll : AttendanceIntent
-    data object ConfirmUndoAttendance : AttendanceIntent
     data object ClearUserMessage : AttendanceIntent
 }
 

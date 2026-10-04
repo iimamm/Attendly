@@ -5,7 +5,6 @@
     <!-- Top App Bar & Menu -->
     <string name="menu_options">Menu Options</string>
     <string name="menu_bypass_time">Bypass Working Hours (Simulate)</string>
-    <string name="menu_undo_attendance">Undo Today\'s Attendance</string>
     <string name="menu_view_history">View Attendance History</string>
     <string name="menu_reset_all">Reset Everything</string>
     <string name="simulation_active_badge">SIMULATION MODE</string>
@@ -53,14 +52,10 @@
     <!-- Dialogs -->
     <string name="confirm_reset_title">Reset Everything?</string>
     <string name="confirm_reset_message">This will remove the saved office location, all attendance logs, and restore default simulation settings.</string>
-    <string name="confirm_undo_title">Undo Today\'s Attendance?</string>
-    <string name="confirm_undo_message">Are you sure you want to delete today\'s attendance record? You will be able to mark attendance again.</string>
     <string name="btn_confirm">Confirm</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_reset">Reset</string>
-    <string name="btn_undo">Undo</string>
     <string name="data_reset_success">All data has been reset to defaults</string>
-    <string name="attendance_undo_success">Today\'s attendance was undone</string>
 
     <!-- Permissions and GPS Failure Handling -->
     <string name="permission_required_title">Location Permission Required</string>

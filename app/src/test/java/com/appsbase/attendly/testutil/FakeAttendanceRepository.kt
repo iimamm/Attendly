@@ -40,10 +40,6 @@ class FakeAttendanceRepository : AttendanceRepository {
         return record
     }
 
-    override suspend fun undoTodayAttendance() {
-        todayAttendanceFlow.value = null
-    }
-
     override suspend fun resetAllData() {
         officeLocationFlow.value = null
         attendanceHistoryFlow.value = emptyList()

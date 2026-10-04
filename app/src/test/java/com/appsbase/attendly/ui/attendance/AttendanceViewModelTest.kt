@@ -143,27 +143,6 @@ class AttendanceViewModelTest {
     }
 
     @Test
-    fun onConfirmUndoAttendance_clearsTodayAttendance() = runTest {
-        advanceUntilIdle()
-
-        // Setup marked attendance
-        val loc = LocationModel(23.8103, 90.4125)
-        viewModel.onIntent(AttendanceIntent.MapCameraMoved(loc))
-        viewModel.onIntent(AttendanceIntent.SaveOfficeLocationClicked)
-        advanceUntilIdle()
-        viewModel.onIntent(AttendanceIntent.MarkAttendanceClicked)
-        advanceUntilIdle()
-
-        assertNotNull(viewModel.state.value.todayAttendance)
-
-        // Undo
-        viewModel.onIntent(AttendanceIntent.ConfirmUndoAttendance)
-        advanceUntilIdle()
-
-        assertNull(viewModel.state.value.todayAttendance)
-    }
-
-    @Test
     fun onConfirmResetAll_clearsAllDataAndOffice() = runTest {
         advanceUntilIdle()
 

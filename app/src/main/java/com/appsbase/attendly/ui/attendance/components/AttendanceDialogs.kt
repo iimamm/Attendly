@@ -28,25 +28,3 @@ fun ResetConfirmationDialog(
         }
     )
 }
-
-@Composable
-fun UndoConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.confirm_undo_title)) },
-        text = { Text(text = stringResource(R.string.confirm_undo_message)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(text = stringResource(R.string.btn_undo))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.btn_cancel))
-            }
-        }
-    )
-}

@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -81,7 +80,6 @@ import com.appsbase.attendly.domain.model.AttendanceStatus
 import com.appsbase.attendly.domain.model.LocationModel
 import com.appsbase.attendly.ui.attendance.components.AttendanceHistoryBottomSheet
 import com.appsbase.attendly.ui.attendance.components.ResetConfirmationDialog
-import com.appsbase.attendly.ui.attendance.components.UndoConfirmationDialog
 import com.appsbase.attendly.ui.theme.ErrorRed
 import com.appsbase.attendly.ui.theme.PrimaryBlue
 import com.appsbase.attendly.ui.theme.PrimaryBlueLight
@@ -277,22 +275,6 @@ fun AttendanceScreen(
                                         MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                        )
-
-                        // Undo Today's Attendance
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.menu_undo_attendance)) },
-                            onClick = {
-                                showMenu = false
-                                viewModel.onIntent(AttendanceIntent.ShowUndoConfirmDialog(true))
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Undo,
-                                    contentDescription = null
-                                )
-                            },
-                            enabled = state.todayAttendance != null
                         )
 
                         // View Attendance History
@@ -558,13 +540,6 @@ fun AttendanceScreen(
         ResetConfirmationDialog(
             onConfirm = { viewModel.onIntent(AttendanceIntent.ConfirmResetAll) },
             onDismiss = { viewModel.onIntent(AttendanceIntent.ShowResetConfirmDialog(false)) }
-        )
-    }
-
-    if (state.showUndoConfirmDialog) {
-        UndoConfirmationDialog(
-            onConfirm = { viewModel.onIntent(AttendanceIntent.ConfirmUndoAttendance) },
-            onDismiss = { viewModel.onIntent(AttendanceIntent.ShowUndoConfirmDialog(false)) }
         )
     }
 

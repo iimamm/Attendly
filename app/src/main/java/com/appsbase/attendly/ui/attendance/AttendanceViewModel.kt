@@ -203,16 +203,8 @@ class AttendanceViewModel @Inject constructor(
                 _state.update { it.copy(showResetConfirmDialog = intent.show) }
             }
 
-            is AttendanceIntent.ShowUndoConfirmDialog -> {
-                _state.update { it.copy(showUndoConfirmDialog = intent.show) }
-            }
-
             is AttendanceIntent.ConfirmResetAll -> {
                 resetAllData()
-            }
-
-            is AttendanceIntent.ConfirmUndoAttendance -> {
-                undoTodayAttendance()
             }
 
             is AttendanceIntent.ClearUserMessage -> {
@@ -284,14 +276,6 @@ class AttendanceViewModel @Inject constructor(
                 "Standard office hours restored"
             }
             _effect.emit(AttendanceEffect.ShowSnackbar(message))
-        }
-    }
-
-    private fun undoTodayAttendance() {
-        viewModelScope.launch {
-            repository.undoTodayAttendance()
-            _state.update { it.copy(showUndoConfirmDialog = false) }
-            _effect.emit(AttendanceEffect.ShowSnackbar("Today's attendance was undone"))
         }
     }
 
