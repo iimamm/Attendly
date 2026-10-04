@@ -2,6 +2,10 @@
 
 Geo-fenced attendance marking for Android: set your office once on a live map, then check in only when you are actually there.
 
+> ## 📲 [⬇️ Download the Signed Release APK](https://drive.google.com/file/d/16wgXV6zoZ-U7zGPGNRXKgMFHjE3rSuN-/view?usp=sharing)
+>
+> **Production build v1.0** — minified (R8 + resource shrinking), signed with the project keystore. Only **1.7 MB**. Open the Drive link → tap the download icon → install.
+
 ## 1. Project Title and Description
 
 **Attendly** is a native Android app for geo-fenced attendance marking. The user defines an office location on an interactive Google Map, and attendance can be marked only when all of these hold:
