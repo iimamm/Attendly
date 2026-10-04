@@ -5,7 +5,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.appsbase.attendly.R
+import com.appsbase.attendly.ui.theme.AttendlyTheme
 
 @Composable
 fun ResetConfirmationDialog(
@@ -27,4 +29,12 @@ fun ResetConfirmationDialog(
             }
         }
     )
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 300, name = "Reset confirmation dialog")
+@Composable
+private fun ResetConfirmationDialogPreview() {
+    AttendlyTheme {
+        ResetConfirmationDialog(onConfirm = {}, onDismiss = {})
+    }
 }

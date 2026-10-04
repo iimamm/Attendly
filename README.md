@@ -41,7 +41,8 @@ app/src/main/java/com/appsbase/attendly/
 │   ├── usecase/                # ValidateAttendanceEligibility, MarkAttendance, SaveOfficeLocation
 │   └── util/                   # GeoFenceCalculator (Haversine), TimeValidator
 └── ui/
-    ├── attendance/             # AttendanceScreen, AttendanceViewModel, MVI contract, components
+    ├── attendance/             # AttendanceScreen, AttendanceViewModel, MVI contract
+    │   └── components/         # widgets: TopBar, GuidanceBanners, OfficeContextCard, ProximityWidgets, MarkAttendanceSection, history sheet, dialogs
     └── theme/                  # Material 3 color schemes (light + dark)
 ```
 
