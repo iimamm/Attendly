@@ -1,73 +1,71 @@
 <resources>
     <string name="app_name">Attendly</string>
-    <string name="tagline">Smart Geo-Fenced Attendance</string>
 
-    <!-- Top App Bar & Menu -->
-    <string name="menu_options">Menu Options</string>
+    <!-- Top bar & overflow menu -->
+    <string name="back">Back</string>
+    <string name="menu_options">Menu options</string>
     <string name="menu_bypass_time">Bypass Working Hours (Simulate)</string>
+    <string name="menu_disable_simulation">Disable Simulation</string>
     <string name="menu_view_history">View Attendance History</string>
     <string name="menu_reset_all">Reset Everything</string>
     <string name="simulation_active_badge">SIMULATION MODE</string>
-    <string name="simulation_mode_desc">Working hours check bypassed for testing</string>
 
-    <!-- Setup Phase -->
+    <!-- Office context card -->
+    <string name="office_context_step">STEP 1: OFFICE CONTEXT</string>
+    <string name="office_context_hint">To mark your attendance, ensure your current office location is correctly identified.</string>
     <string name="set_office_location">Set Office Location</string>
     <string name="update_office_location">Update Office Location</string>
-    <string name="office_location_not_set">Office location is not set yet. Drag the map or tap the location button and press \"%1$s\" to establish your workplace geofence.</string>
-    <string name="office_location_saved_success">Office location updated successfully</string>
-    <string name="current_office_label">Target Office Location</string>
-    <string name="geofence_radius_label">Geofence Radius: 50 meters</string>
+    <string name="target_coords_format">Lat: %1$.4f, Lon: %2$.4f</string>
+    <string name="my_location_tooltip">Center on My Location</string>
+    <string name="office_marker_title">Office (Geofence Center)</string>
 
-    <!-- Distance & Proximity Feedback -->
-    <string name="distance_away_format">You are %1$d m away from the office</string>
-    <string name="distance_within_format">You are inside the office geofence (%1$d m away)</string>
-    <string name="distance_calculating">Calculating distance to office…</string>
-    <string name="distance_office_unset">Distance unavailable (Office unset)</string>
-    <string name="status_in_range">In Range (Eligible)</string>
-    <string name="status_out_of_range">Out of Range</string>
-    <string name="status_unset">Office Unset</string>
+    <!-- Distance ring & status -->
+    <string name="distance_away_label">AWAY</string>
+    <string name="chip_in_range">IN RANGE</string>
+    <string name="chip_out_of_range">OUT OF RANGE</string>
+    <string name="chip_office_unset">OFFICE UNSET</string>
+    <string name="chip_marked_today">MARKED TODAY</string>
+    <string name="hint_in_range">You’re within range. You can mark your attendance.</string>
+    <string name="hint_out_of_range">Move within %1$d meters of the designated office location to enable check-in.</string>
+    <string name="attendance_disabled_unset_reason">Please set the office location first.</string>
+    <string name="attendance_disabled_time_reason">Attendance can only be marked during office hours unless simulated.</string>
+    <string name="attendance_already_marked">You have already marked attendance for today.</string>
 
-    <!-- Time Validation -->
-    <string name="working_hours_info">Working Hours: %1$s – %2$s</string>
-    <string name="time_valid">Within Working Hours</string>
-    <string name="time_invalid">Outside Working Hours (%1$s – %2$s)</string>
-    <string name="time_invalid_hint">Attendance can only be marked during office hours unless simulated.</string>
-
-    <!-- Mark Attendance Actions -->
+    <!-- Mark attendance section -->
     <string name="mark_attendance">Mark Attendance</string>
     <string name="attendance_marked_today">Attendance Marked for Today</string>
-    <string name="attendance_marked_success">Attendance marked successfully!</string>
-    <string name="attendance_already_marked">You have already marked attendance for today.</string>
-    <string name="attendance_disabled_distance_reason">Move within 50m of the office to mark attendance.</string>
-    <string name="attendance_disabled_time_reason">Attendance is disabled outside working hours.</string>
-    <string name="attendance_disabled_unset_reason">Please set the office location first.</string>
+    <string name="caption_available_window">AVAILABLE %1$s</string>
+    <string name="caption_any_time">SIMULATION: ANY TIME</string>
+    <string name="caption_marked_at">MARKED TODAY AT %1$s</string>
 
-    <!-- History Bottom Sheet -->
-    <string name="attendance_history_title">Marked Attendance History</string>
-    <string name="attendance_history_empty">No attendance records found yet.</string>
-    <string name="attendance_record_format">Marked on %1$s at %2$s</string>
-    <string name="attendance_coords_format">Location: %1$.5f, %2$.5f (Dist: %3$d m)</string>
-    <string name="close">Close</string>
-
-    <!-- Dialogs -->
-    <string name="confirm_reset_title">Reset Everything?</string>
-    <string name="confirm_reset_message">This will remove the saved office location, all attendance logs, and restore default simulation settings.</string>
-    <string name="btn_confirm">Confirm</string>
-    <string name="btn_cancel">Cancel</string>
-    <string name="btn_reset">Reset</string>
-    <string name="data_reset_success">All data has been reset to defaults</string>
-
-    <!-- Permissions and GPS Failure Handling -->
+    <!-- Permission & GPS banners -->
     <string name="permission_required_title">Location Permission Required</string>
     <string name="permission_required_message">Attendly requires precise GPS location to calculate your proximity to the office geofence. Please grant location access.</string>
     <string name="permission_grant_btn">Grant Permission</string>
     <string name="gps_disabled_title">GPS is Disabled</string>
     <string name="gps_disabled_message">Please enable device location services (GPS) to verify your office proximity.</string>
     <string name="gps_enable_btn">Enable GPS</string>
-    <string name="gps_fetching">Fetching accurate GPS location…</string>
-    <string name="gps_error">Unable to obtain GPS location. Please check your location settings.</string>
 
-    <!-- Map UI Controls -->
-    <string name="my_location_tooltip">Center on My Location</string>
-    <string name="office_pin_label">Office Pin</string>
+    <!-- History bottom sheet -->
+    <string name="attendance_history_title">Marked Attendance History</string>
+    <string name="attendance_history_empty">No attendance records found yet.</string>
+    <string name="attendance_record_format">Marked on %1$s at %2$s</string>
+    <string name="attendance_coords_format">Location: %1$.5f, %2$.5f (Dist: %3$d m)</string>
+    <string name="close">Close</string>
+
+    <!-- Reset dialog -->
+    <string name="confirm_reset_title">Reset Everything?</string>
+    <string name="confirm_reset_message">This will remove the saved office location, all attendance logs, and restore default simulation settings.</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_reset">Reset</string>
+
+    <!-- Snackbars -->
+    <string name="office_location_saved_success">Office location updated successfully</string>
+    <string name="snackbar_office_save_failed">Failed to update office location</string>
+    <string name="snackbar_location_unavailable">Unable to determine your current location</string>
+    <string name="attendance_marked_success">Attendance marked successfully!</string>
+    <string name="snackbar_mark_failed">Unable to mark attendance</string>
+    <string name="simulation_enabled">Time validation bypassed (Simulation Mode)</string>
+    <string name="simulation_disabled">Standard office hours restored</string>
+    <string name="data_reset_success">All settings and attendance history reset</string>
 </resources>

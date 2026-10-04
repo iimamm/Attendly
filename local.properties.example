@@ -1,0 +1,4 @@
+# Copy this file to `local.properties` (git-ignored) and fill in your key.
+# The key is injected into AndroidManifest.xml at build time via
+# manifestPlaceholders — it is never committed to version control.
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY

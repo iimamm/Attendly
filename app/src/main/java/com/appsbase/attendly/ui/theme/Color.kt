@@ -2,30 +2,31 @@ package com.appsbase.attendly.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Colors - Deep Indigo & Modern Slate
-val PrimaryBlue = Color(0xFF1E5BB8)
-val PrimaryBlueDark = Color(0xFF0F3A80)
-val PrimaryBlueLight = Color(0xFFE8F1FC)
+// Brand
+val PrimaryBlue = Color(0xFF2F6BE8)
+val PrimaryBlueLight = Color(0xFF9DBCF7)
+val PrimaryBlueContainer = Color(0xFFE8F0FE)
+val PrimaryBlueContainerDark = Color(0xFF22355E)
+val TitleNavy = Color(0xFF2B3990)
 
-// Status & Feedback Colors
-val SuccessGreen = Color(0xFF16A34A)
-val SuccessGreenLight = Color(0xFFDCFCE7)
+// Status
+val SuccessGreen = Color(0xFF2E9E5B)
+val SuccessContainer = Color(0xFFE6F5EC)
+val DangerRed = Color(0xFFD9453D)
+val DangerContainer = Color(0xFFFBECEA)
 val WarningAmber = Color(0xFFD97706)
-val WarningAmberLight = Color(0xFFFEF3C7)
-val ErrorRed = Color(0xFFDC2626)
-val ErrorRedLight = Color(0xFFFEE2E2)
+val WarningContainer = Color(0xFFFEF3C7)
 
-// Neutral Grays
-val Neutral900 = Color(0xFF0F172A)
-val Neutral800 = Color(0xFF1E293B)
-val Neutral700 = Color(0xFF334155)
-val Neutral500 = Color(0xFF64748B)
-val Neutral200 = Color(0xFFE2E8F0)
-val Neutral100 = Color(0xFFF1F5F9)
-val Neutral50 = Color(0xFFF8FAFC)
+// Neutrals
+val ScreenBackground = Color(0xFFF4F7FA)
+val LabelGrey = Color(0xFF5B6475)
+val BodyGrey = Color(0xFF4A5160)
+val HintGrey = Color(0xFF9AA1AF)
+val TrackGrey = Color(0xFFE6E9EE)
+val DisabledButton = Color(0xFFC9D0DE)
+val DisabledTextGrey = Color(0xFF4F586B)
 
-// Dark Theme Variants
-val PrimaryBlueContainerDark = Color(0xFF1A3866)
-val DarkSurface = Color(0xFF121824)
-val DarkSurfaceVariant = Color(0xFF1E293B)
-val DarkBackground = Color(0xFF0A0F18)
+// Dark theme
+val DarkBackground = Color(0xFF10131C)
+val DarkSurface = Color(0xFF171B26)
+val DarkSurfaceVariant = Color(0xFF252B3D)

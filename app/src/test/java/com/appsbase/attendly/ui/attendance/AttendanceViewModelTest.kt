@@ -82,6 +82,23 @@ class AttendanceViewModelTest {
     }
 
     @Test
+    fun refreshLocationState_detectsGpsDisabled() = runTest {
+        advanceUntilIdle()
+
+        fakeLocationTracker.gpsEnabled = false
+        viewModel.onIntent(AttendanceIntent.RefreshLocationState)
+        advanceUntilIdle()
+
+        org.junit.Assert.assertFalse(viewModel.state.value.isGpsEnabled)
+
+        fakeLocationTracker.gpsEnabled = true
+        viewModel.onIntent(AttendanceIntent.RefreshLocationState)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.isGpsEnabled)
+    }
+
+    @Test
     fun onMapCameraMoved_updatesTargetOfficeLocation() = runTest {
         advanceUntilIdle()
 

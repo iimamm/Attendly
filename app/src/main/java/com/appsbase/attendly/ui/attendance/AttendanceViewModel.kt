@@ -1,8 +1,11 @@
 package com.appsbase.attendly.ui.attendance
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appsbase.attendly.R
 import com.appsbase.attendly.data.location.LocationTracker
+import com.appsbase.attendly.domain.model.AttendanceStatus
 import com.appsbase.attendly.domain.model.LocationModel
 import com.appsbase.attendly.domain.repository.AttendanceRepository
 import com.appsbase.attendly.domain.usecase.MarkAttendanceUseCase
@@ -30,7 +33,7 @@ class AttendanceViewModel @Inject constructor(
     private val validateEligibilityUseCase: ValidateAttendanceEligibilityUseCase,
     private val markAttendanceUseCase: MarkAttendanceUseCase,
     private val saveOfficeLocationUseCase: SaveOfficeLocationUseCase,
-    private val timeValidator: TimeValidator
+    timeValidator: TimeValidator
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AttendanceState())
@@ -42,19 +45,17 @@ class AttendanceViewModel @Inject constructor(
     private var locationUpdatesJob: Job? = null
 
     init {
-        observeRepositoryData()
-        checkInitialPermissions()
-    }
-
-    private fun checkInitialPermissions() {
+        val (start, end) = timeValidator.getWorkHoursFormatted()
         val hasPermission = locationTracker.hasLocationPermission()
-        val isGpsOn = locationTracker.isGpsEnabled()
+        val gpsEnabled = locationTracker.isGpsEnabled()
         _state.update {
             it.copy(
+                checkInWindow = "$start – $end",
                 hasLocationPermission = hasPermission,
-                isGpsEnabled = isGpsOn
+                isGpsEnabled = gpsEnabled
             )
         }
+        observeRepositoryData()
         if (hasPermission) {
             startLocationTracking()
         }
@@ -95,22 +96,45 @@ class AttendanceViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Re-reads permission and GPS provider state (dispatched when the app resumes,
+     * e.g. after the user returns from system settings) and restarts tracking if
+     * either flag flipped to available.
+     */
+    private fun refreshLocationState() {
+        val hasPermission = locationTracker.hasLocationPermission()
+        val gpsEnabled = locationTracker.isGpsEnabled()
+        val stateChanged = hasPermission != _state.value.hasLocationPermission ||
+                gpsEnabled != _state.value.isGpsEnabled
+
+        _state.update {
+            it.copy(hasLocationPermission = hasPermission, isGpsEnabled = gpsEnabled)
+        }
+
+        if (hasPermission) {
+            if (stateChanged) startLocationTracking()
+        } else {
+            locationUpdatesJob?.cancel()
+        }
+    }
+
     private fun startLocationTracking() {
         locationUpdatesJob?.cancel()
         locationUpdatesJob = viewModelScope.launch {
-            // First fetch immediate one-off location to center map quickly
             val initialLocation = locationTracker.getCurrentLocation()
             if (initialLocation != null) {
                 _state.update { current ->
                     current.copy(
                         currentLocation = initialLocation,
-                        targetOfficeLocation = current.targetOfficeLocation ?: initialLocation
+                        targetOfficeLocation = when {
+                            current.officeLocation != null -> current.targetOfficeLocation
+                            else -> initialLocation
+                        }
                     )
                 }
                 recalculateEligibility()
             }
 
-            // Stream continuous location updates
             locationTracker.locationUpdates.collectLatest { location ->
                 _state.update { current ->
                     current.copy(
@@ -124,48 +148,30 @@ class AttendanceViewModel @Inject constructor(
     }
 
     private fun recalculateEligibility() {
-        val current = _state.value
         val eligibility = validateEligibilityUseCase(
-            currentLocation = current.currentLocation,
-            officeLocation = current.officeLocation,
-            todayAttendance = current.todayAttendance,
-            bypassTimeSimulation = current.simulationConfig.bypassTimeValidation
+            currentLocation = _state.value.currentLocation,
+            officeLocation = _state.value.officeLocation,
+            todayAttendance = _state.value.todayAttendance,
+            bypassTimeSimulation = _state.value.simulationConfig.bypassTimeValidation
         )
-
-        val isWithinTime = timeValidator.isWithinWorkHours(
-            bypassSimulation = current.simulationConfig.bypassTimeValidation
-        )
-
-        val isInsideGeofence = eligibility.distanceMeters?.let {
-            GeoFenceCalculator.isWithinGeofence(it)
-        } ?: false
 
         _state.update {
             it.copy(
                 eligibilityStatus = eligibility.status,
                 distanceMeters = eligibility.distanceMeters,
-                isWithinGeofence = isInsideGeofence,
-                isWithinTimeWindow = isWithinTime
+                isWithinGeofence = eligibility.distanceMeters
+                    ?.let(GeoFenceCalculator::isWithinGeofence) == true
             )
         }
     }
 
     fun onIntent(intent: AttendanceIntent) {
         when (intent) {
-            is AttendanceIntent.RefreshLocationState -> {
-                checkInitialPermissions()
-            }
+            is AttendanceIntent.RefreshLocationState -> refreshLocationState()
 
             is AttendanceIntent.PermissionResultReceived -> {
                 _state.update { it.copy(hasLocationPermission = intent.isGranted) }
                 if (intent.isGranted) {
-                    startLocationTracking()
-                }
-            }
-
-            is AttendanceIntent.GpsStatusUpdated -> {
-                _state.update { it.copy(isGpsEnabled = intent.isEnabled) }
-                if (intent.isEnabled && _state.value.hasLocationPermission) {
                     startLocationTracking()
                 }
             }
@@ -183,17 +189,11 @@ class AttendanceViewModel @Inject constructor(
                 }
             }
 
-            is AttendanceIntent.SaveOfficeLocationClicked -> {
-                saveOfficeLocation()
-            }
+            is AttendanceIntent.SaveOfficeLocationClicked -> saveOfficeLocation()
 
-            is AttendanceIntent.MarkAttendanceClicked -> {
-                markAttendance()
-            }
+            is AttendanceIntent.MarkAttendanceClicked -> markAttendance()
 
-            is AttendanceIntent.ToggleTimeSimulation -> {
-                toggleTimeSimulation()
-            }
+            is AttendanceIntent.ToggleTimeSimulation -> toggleTimeSimulation()
 
             is AttendanceIntent.ShowHistorySheet -> {
                 _state.update { it.copy(showHistorySheet = intent.show) }
@@ -203,22 +203,14 @@ class AttendanceViewModel @Inject constructor(
                 _state.update { it.copy(showResetConfirmDialog = intent.show) }
             }
 
-            is AttendanceIntent.ConfirmResetAll -> {
-                resetAllData()
-            }
-
-            is AttendanceIntent.ClearUserMessage -> {
-                _state.update { it.copy(userFeedbackMessage = null) }
-            }
+            is AttendanceIntent.ConfirmResetAll -> resetAllData()
         }
     }
 
     private fun saveOfficeLocation() {
         val target = _state.value.targetOfficeLocation ?: _state.value.currentLocation
         if (target == null) {
-            viewModelScope.launch {
-                _effect.emit(AttendanceEffect.ShowSnackbar("Cannot determine location to set"))
-            }
+            emitEffect(R.string.snackbar_location_unavailable)
             return
         }
 
@@ -227,28 +219,24 @@ class AttendanceViewModel @Inject constructor(
             val result = saveOfficeLocationUseCase(target)
             _state.update { it.copy(isSavingOffice = false) }
 
-            if (result.isSuccess) {
-                _effect.emit(AttendanceEffect.ShowSnackbar("Office location updated successfully!"))
-            } else {
-                _effect.emit(AttendanceEffect.ShowSnackbar("Failed to update office location"))
-            }
+            emitEffect(
+                if (result.isSuccess) R.string.office_location_saved_success
+                else R.string.snackbar_office_save_failed
+            )
         }
     }
 
     private fun markAttendance() {
         val currentLoc = _state.value.currentLocation
         val office = _state.value.officeLocation
-
         if (currentLoc == null || office == null) {
-            viewModelScope.launch {
-                _effect.emit(AttendanceEffect.ShowSnackbar("Location details not fully initialized"))
-            }
+            emitEffect(R.string.snackbar_location_unavailable)
             return
         }
 
         viewModelScope.launch {
             _state.update { it.copy(isMarkingAttendance = true) }
-            val result = markAttendanceUseCase(
+            val record = markAttendanceUseCase(
                 currentLocation = currentLoc,
                 officeLocation = office,
                 todayAttendance = _state.value.todayAttendance,
@@ -256,26 +244,21 @@ class AttendanceViewModel @Inject constructor(
             )
             _state.update { it.copy(isMarkingAttendance = false) }
 
-            if (result.isSuccess) {
-                _effect.emit(AttendanceEffect.ShowSnackbar("Attendance marked successfully!"))
-            } else {
-                val errorMsg = result.exceptionOrNull()?.message ?: "Unable to mark attendance"
-                _effect.emit(AttendanceEffect.ShowSnackbar(errorMsg))
-            }
+            emitEffect(
+                if (record != null) R.string.attendance_marked_success
+                else messageFor(_state.value.eligibilityStatus)
+            )
         }
     }
 
     private fun toggleTimeSimulation() {
         viewModelScope.launch {
-            val currentVal = _state.value.simulationConfig.bypassTimeValidation
-            val newVal = !currentVal
+            val newVal = !_state.value.simulationConfig.bypassTimeValidation
             repository.setTimeBypassSimulation(newVal)
-            val message = if (newVal) {
-                "Time validation bypassed (Simulation Mode)"
-            } else {
-                "Standard office hours restored"
-            }
-            _effect.emit(AttendanceEffect.ShowSnackbar(message))
+            emitEffect(
+                if (newVal) R.string.simulation_enabled
+                else R.string.simulation_disabled
+            )
         }
     }
 
@@ -289,7 +272,22 @@ class AttendanceViewModel @Inject constructor(
                     targetOfficeLocation = it.currentLocation
                 )
             }
-            _effect.emit(AttendanceEffect.ShowSnackbar("All settings and attendance history reset!"))
+            emitEffect(R.string.data_reset_success)
         }
+    }
+
+    private fun emitEffect(@StringRes messageRes: Int) {
+        viewModelScope.launch {
+            _effect.emit(AttendanceEffect.ShowSnackbar(messageRes))
+        }
+    }
+
+    @StringRes
+    private fun messageFor(status: AttendanceStatus): Int = when (status) {
+        AttendanceStatus.OFFICE_NOT_SET -> R.string.attendance_disabled_unset_reason
+        AttendanceStatus.OUTSIDE_GEOFENCE -> R.string.hint_out_of_range
+        AttendanceStatus.OUTSIDE_TIME_WINDOW -> R.string.attendance_disabled_time_reason
+        AttendanceStatus.ALREADY_MARKED -> R.string.attendance_already_marked
+        AttendanceStatus.ELIGIBLE -> R.string.snackbar_mark_failed
     }
 }

@@ -49,7 +49,8 @@ class DefaultLocationTracker @Inject constructor(
     }
 
     override fun isGpsEnabled(): Boolean {
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val locationManager =
+            context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         return locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
                 locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
     }
@@ -103,8 +104,7 @@ class DefaultLocationTracker @Inject constructor(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 cancellationTokenSource.token
             )
-            val location = task.awaitTask()
-            location?.let {
+            task.awaitTask()?.let {
                 LocationModel(
                     latitude = it.latitude,
                     longitude = it.longitude,
