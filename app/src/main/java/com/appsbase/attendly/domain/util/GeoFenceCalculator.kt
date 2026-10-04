@@ -11,7 +11,6 @@ object GeoFenceCalculator {
 
     /**
      * Calculates great-circle distance between two GPS coordinates using Haversine formula.
-     * Pure Kotlin function with zero Android framework dependencies, ensuring fast JVM unit testing.
      */
     fun calculateDistanceMeters(
         startLat: Double,
