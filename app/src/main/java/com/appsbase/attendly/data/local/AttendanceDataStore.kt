@@ -12,9 +12,12 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.appsbase.attendly.domain.model.AttendanceRecord
 import com.appsbase.attendly.domain.model.OfficeLocation
 import com.appsbase.attendly.domain.model.SimulationConfig
+import com.appsbase.attendly.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
@@ -26,7 +29,8 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "at
 
 @Singleton
 class AttendanceDataStore @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
     private val dataStore = context.dataStore
 
@@ -52,6 +56,7 @@ class AttendanceDataStore @Inject constructor(
                 null
             }
         }
+        .flowOn(ioDispatcher)
 
     suspend fun saveOfficeLocation(latitude: Double, longitude: Double) {
         dataStore.edit { prefs ->
@@ -69,6 +74,7 @@ class AttendanceDataStore @Inject constructor(
             val jsonString = prefs[KEY_ATTENDANCE_HISTORY] ?: "[]"
             parseAttendanceRecords(jsonString)
         }
+        .flowOn(ioDispatcher)
 
     suspend fun addAttendanceRecord(record: AttendanceRecord) {
         dataStore.edit { prefs ->
@@ -88,6 +94,7 @@ class AttendanceDataStore @Inject constructor(
                 bypassTimeValidation = prefs[KEY_BYPASS_TIME_SIMULATION] ?: false
             )
         }
+        .flowOn(ioDispatcher)
 
     suspend fun setBypassTimeSimulation(enabled: Boolean) {
         dataStore.edit { prefs ->

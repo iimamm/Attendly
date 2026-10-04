@@ -38,6 +38,9 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+private val HistoryDateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
+private val HistoryTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceHistoryBottomSheet(
@@ -125,8 +128,6 @@ private fun HistoryContent(
 @Composable
 private fun AttendanceRecordItem(record: AttendanceRecord) {
     val dateTime = Instant.ofEpochMilli(record.timestamp).atZone(ZoneId.systemDefault())
-    val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
-    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
 
     Card(
         modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
@@ -152,8 +153,8 @@ private fun AttendanceRecordItem(record: AttendanceRecord) {
                 Text(
                     text = stringResource(
                         R.string.attendance_record_format,
-                        dateTime.format(dateFormatter),
-                        dateTime.format(timeFormatter)
+                        dateTime.format(HistoryDateFormatter),
+                        dateTime.format(HistoryTimeFormatter)
                     ), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(2.dp))

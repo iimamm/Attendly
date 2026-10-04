@@ -74,7 +74,7 @@ Return path (same chain, upward): **Data → Domain → ViewModel → UI**. The 
 | Maps Compose / Play Services Location | 4.4.1 / 21.3.0 |
 | JUnit4 / Turbine / coroutines-test / MockK | 4.13.2 / 1.2.0 / 1.10.1 / 1.13.14 |
 
-SDK: `minSdk 24`, `compileSdk`/`targetSdk 35`.
+SDK: `minSdk 24`, `compileSdk`/`targetSdk 36`.
 
 ## Steps
 
@@ -95,38 +95,38 @@ Create:
 
 ### Step 3 — Data layer
 Create:
-- `data/local/AttendanceDataStore.kt` — Preferences DataStore named `attendly_prefs`; keys `office_latitude`/`office_longitude` (Double), `office_is_set` (Boolean), `attendance_history` (JSON array, objects `{id, timestamp, lat, lng, dist}`, newest-first insert at index 0), `bypass_time_simulation` (Boolean); flows map IOException → empty defaults; `clearAll()` wipes everything.
+- `data/local/AttendanceDataStore.kt` — Preferences DataStore named `attendly_prefs`; keys `office_latitude`/`office_longitude` (Double), `office_is_set` (Boolean), `attendance_history` (JSON array, objects `{id, timestamp, lat, lng, dist}`, newest-first insert at index 0), `bypass_time_simulation` (Boolean); flows map IOException → empty defaults and run their mapping (JSON parsing) on the injected `@IoDispatcher` via `flowOn`; `clearAll()` wipes everything.
 - `data/repository/AttendanceRepositoryImpl.kt` — delegates to the DataStore; `todayAttendance` derives from history filtered to `[startOfDay, startOfDay + 24 h)` of `timeProvider.now()`; `markAttendance` builds the record with `UUID` id and `timeProvider.currentTimeMillis()`.
-- `data/location/LocationTracker.kt` — interface (`locationUpdates: Flow<LocationModel>`, `suspend getCurrentLocation(): LocationModel?`, `hasLocationPermission()`, `isGpsEnabled()`) + `DefaultLocationTracker`: permission-guarded; GPS state via `LocationManager` provider check (GPS **or** network provider enabled); stream via `callbackFlow` with `LocationRequest(PRIORITY_HIGH_ACCURACY, 3000 ms, min 1500 ms)`; one-shot `getCurrentLocation` with a cancellation token and a `Task.awaitTask()` helper that resumes `null` on failure.
+- `data/location/LocationTracker.kt` — interface (`locationUpdates: Flow<LocationModel>`, `suspend getCurrentLocation(): LocationModel?`, `hasLocationPermission()`, `isGpsEnabled()`) + `DefaultLocationTracker`: permission-guarded; GPS state via `LocationManager` provider check (GPS **or** network provider enabled); stream via `callbackFlow` with `LocationRequest(PRIORITY_HIGH_ACCURACY, 3000 ms, min 1500 ms)`; one-shot `getCurrentLocation` with a cancellation token that is cancelled if the calling coroutine is cancelled, and a `Task.awaitTask()` helper that resumes `null` on failure.
 
 **Acceptance:** Hilt graph completes — `./gradlew assembleDebug` with the repository bound.
 
 ### Step 4 — Presentation (MVI + Compose UI)
 Create `ui/attendance/AttendanceContract.kt`:
 - `AttendanceState` — `currentLocation`, `officeLocation`, `targetOfficeLocation`, `distanceMeters`, `eligibilityStatus`, `isWithinGeofence`, `todayAttendance`, `attendanceHistory`, `simulationConfig`, `checkInWindow`, `hasLocationPermission`, `isGpsEnabled`, `isMarkingAttendance`, `isSavingOffice`, `showHistorySheet`, `showResetConfirmDialog`.
-- `AttendanceIntent` — `RefreshLocationState` (dispatched from `LifecycleResumeEffect` on every app resume), `PermissionResultReceived(isGranted)`, `MapCameraMoved(center)`, `CenterMapOnCurrentLocation`, `SaveOfficeLocationClicked`, `MarkAttendanceClicked`, `ToggleTimeSimulation`, `ShowHistorySheet(show)`, `ShowResetConfirmDialog(show)`, `ConfirmResetAll`.
+- `AttendanceIntent` — `RefreshLocationState` (ON_RESUME) and `PauseLocationTracking` (ON_STOP) dispatched from lifecycle effects so GPS collection pauses while backgrounded, `PermissionResultReceived(isGranted)`, `MapCameraMoved(center)` (deduped in the ViewModel), `CenterMapOnCurrentLocation`, `SaveOfficeLocationClicked`, `MarkAttendanceClicked`, `ToggleTimeSimulation`, `ShowHistorySheet(show)`, `ShowResetConfirmDialog(show)`, `ConfirmResetAll`.
 - `AttendanceEffect` — `ShowSnackbar(@StringRes messageRes)`, `AnimateMapCamera(location)`.
 
-Create `ui/attendance/AttendanceViewModel.kt`: init sets `checkInWindow` (e.g. `"09:00 AM – 06:00 PM"`), `hasLocationPermission`, and `isGpsEnabled`, starts tracking if permitted; `RefreshLocationState` re-reads both flags on resume and restarts tracking only when a flag flipped (cancels tracking if permission was revoked); collects the four repository flows plus the GPS stream (one-shot fix first; on first fix with office unset, target = current location); `recalculateEligibility()` after every change; camera-idle dispatches `MapCameraMoved`; on mark failure maps status → string res (`OFFICE_NOT_SET → attendance_disabled_unset_reason`, `OUTSIDE_GEOFENCE → hint_out_of_range`, `OUTSIDE_TIME_WINDOW → attendance_disabled_time_reason`, `ALREADY_MARKED → attendance_already_marked`); reset clears storage, sets office null and target = current location.
+Create `ui/attendance/AttendanceViewModel.kt`: init sets `checkInWindow` (e.g. `"09:00 AM – 06:00 PM"`), `hasLocationPermission`, and `isGpsEnabled`, starts tracking if permitted; `RefreshLocationState` re-reads both flags on resume and restarts tracking when it is not running; `PauseLocationTracking` cancels GPS collection on ON_STOP (cancels tracking too if permission is revoked); collects the four repository flows plus the GPS stream (one-shot fix first; on first fix with office unset, target = current location); `recalculateEligibility()` after every change; on mark failure maps status → string res (`OFFICE_NOT_SET → attendance_disabled_unset_reason`, `OUTSIDE_GEOFENCE → hint_out_of_range`, `OUTSIDE_TIME_WINDOW → attendance_disabled_time_reason`, `ALREADY_MARKED → attendance_already_marked`); reset clears storage, sets office null and target = current location.
 
 Create `ui/attendance/AttendanceScreen.kt` (card-based design). `AttendanceScreen` keeps only the ViewModel wiring (permission launcher, camera effects, resume refresh) and delegates rendering to a stateless `AttendanceContent(state, cameraPositionState, snackbarHostState, onBack, onIntent, onRequestPermission)`:
 - `TopAppBar` — back arrow (finishes the activity), left-aligned navy title "Attendance", `SIMULATION MODE` badge, overflow menu (bypass toggle, history with record count, reset).
-- **Office-context card** — 150 dp interactive `GoogleMap` (50 m circle + azure office marker; camera zoom 17, +0.5 on office load), 36 dp center targeting pin, monospace coordinates pill horizontally centered directly above the pin, 40 dp my-location FAB bottom-end, Set/Update Office outlined button (56 dp). In preview/inspection mode the map renders a static placeholder (`LocalInspectionMode`).
+- **Office-context card** — 150 dp interactive `GoogleMap` (50 m circle + azure office marker held by `rememberMarkerState`; camera zoom 17, +0.5 on office load, centers on the **first** GPS fix only so it never fights user drags), 36 dp center targeting pin, monospace coordinates pill horizontally centered directly above the pin, 40 dp my-location FAB bottom-end, Set/Update Office outlined button (56 dp). In preview/inspection mode the map renders a static placeholder (`LocalInspectionMode`).
 - **Distance ring** — 176 dp `Canvas` arc, track grey + accent (green in range / red out), sweep = `1f` in range else `(distance / 200f).coerceIn(0.1f, 1f)`, center `"<n>m"` (or `—`) + `AWAY`.
 - **Status chip** — `OFFICE UNSET` (grey) / `MARKED TODAY` / `IN RANGE` (green) / `OUT OF RANGE` (red); status hint line beneath mirrors `eligibilityStatus`.
 - **Check-in section** — transparent (screen background shows through; no fill) framed only by a stronger dashed rounded border; header icon lock (locked) / lock-open (eligible) / check (marked); Mark Attendance button enabled only when `ELIGIBLE`; caption `AVAILABLE <window>` / `SIMULATION: ANY TIME` / `MARKED TODAY AT <hh:mm a>`.
 - Guidance banners (one shared composable): permission banner (re-request via `RequestMultiplePermissions`, any-granted) and GPS-off banner (`LocationOff` icon, *Enable GPS* opens `Settings.ACTION_LOCATION_SOURCE_SETTINGS`), shown when permission is granted but location services are off.
-- Widgets live in `components/`, one file per major widget: `AttendanceTopBar.kt` (title/back/badge/overflow menu), `GuidanceBanners.kt`, `OfficeContextCard.kt` (card header, map, geofence overlay, my-location FAB, coordinates pill, save button), `ProximityWidgets.kt` (distance ring, status chip, status hint), `MarkAttendanceSection.kt` (section icon, button, caption), plus `AttendanceHistoryBottomSheet.kt` and `AttendanceDialogs.kt` (reset confirmation).
+- Widgets live in `components/`, one file per major widget: `AttendanceTopBar.kt` (title/back/badge/overflow menu), `GuidanceBanners.kt`, `OfficeContextCard.kt` (card header, map, geofence overlay, my-location FAB, coordinates pill, save button), `ProximityWidgets.kt` (distance ring, status chip, status hint), `MarkAttendanceSection.kt` (section icon, button, caption), plus `AttendanceHistoryBottomSheet.kt` and `AttendanceDialogs.kt` (reset confirmation). Widgets take narrow parameters (booleans, counts, the data they render) rather than the whole `AttendanceState` so a GPS tick doesn't recompose unchanged widgets.
 - Four `@Preview` cases render the whole screen without a device: office unset, set-but-out-of-range, set-and-in-range (eligible), set-and-marked-today.
 
 **Acceptance:** app runs on an emulator; unset, out-of-range, eligible, out-of-hours (with simulation), and marked-today states all render; permission and GPS-off banners appear/disappear with system state on resume; camera targeting works.
 
 ### Step 5 — Tests, verification & docs
-Create `testutil/` fakes — `FakeAttendanceRepository` (StateFlow-backed), `FakeLocationTracker` (configurable permission, GPS flag + `MutableStateFlow` location), `FakeTimeProvider` (fixed clock with setters) — and suites (24 tests):
+Create `testutil/` fakes — `FakeAttendanceRepository` (StateFlow-backed), `FakeLocationTracker` (configurable permission, GPS flag + `MutableStateFlow` location, call counter), `FakeTimeProvider` (fixed clock with setters) — and suites (25 tests):
 - `GeoFenceCalculatorTest` (5) — same point = 0, <50 m, exact 50 m boundary, >50 m, custom radius.
 - `TimeValidatorTest` (5) — 08:59 / 09:00 / 18:00 / 18:01, bypass flag.
 - `ValidateAttendanceEligibilityUseCaseTest` (7) — full status matrix incl. null location and simulation bypass.
-- `AttendanceViewModelTest` (7) — intent→state transitions with `StandardTestDispatcher`, incl. GPS disabled/re-enabled refresh.
+- `AttendanceViewModelTest` (8) — intent→state transitions with `StandardTestDispatcher`, incl. GPS disabled/re-enabled refresh and pause/resume of location tracking.
 
 Finish with `README.md` (title/description, structure & MVI classes, AI usage, how to run, screenshots).
 
@@ -135,7 +135,7 @@ Finish with `README.md` (title/description, structure & MVI classes, AI usage, h
 ## Definition of Done
 
 - [ ] All five step acceptance checks pass.
-- [ ] `./gradlew test assembleRelease` — 24 tests green, both APKs build.
+- [ ] `./gradlew test assembleRelease` — 25 tests green, both APKs build.
 - [ ] No `import android.*` under `domain/`; no hardcoded UI strings.
 - [ ] Emulator E2E: set office → in range → mark → MARKED TODAY state → history → reset returns to clean state.
 - [ ] `README.md` contains all five required sections, screenshots included.

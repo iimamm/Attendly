@@ -12,6 +12,7 @@ Core capabilities:
 - **Simulation mode** — overflow-menu toggle that bypasses the working-hours check for evaluation (badged as `SIMULATION MODE`).
 - **History & reset** — bottom sheet listing all attendance records (coordinates + recorded distance), and a confirm-dialog "Reset Everything".
 - **Permission & GPS handling** — in-app banners when location permission is missing (with re-request) or when location services are off (with an *Enable GPS* shortcut to system settings); both are re-checked every time the app resumes.
+- **Lifecycle-aware tracking** — GPS updates pause while the app is backgrounded and resume on return, keeping the app battery-friendly.
 
 ## 2. Project Structure / Approaches
 
@@ -68,7 +69,7 @@ Anything that did not survive review was deleted rather than patched around — 
 
 ## 4. How to Run
 
-**Prerequisites:** Android Studio, JDK 17, Android SDK 35, a Google Maps API key, and a device/emulator with Google Play services (Android 7.0 / API 24 or newer).
+**Prerequisites:** Android Studio, JDK 17, Android SDK 36, a Google Maps API key, and a device/emulator with Google Play services (Android 7.0 / API 24 or newer).
 
 1. **Clone the repository:**
    ```bash
@@ -86,7 +87,7 @@ Anything that did not survive review was deleted rather than patched around — 
    ```bash
    ./gradlew installDebug        # build & install on a connected device/emulator
    ```
-4. **Run the unit tests** (24 tests across four suites):
+4. **Run the unit tests** (25 tests across four suites):
    ```bash
    ./gradlew test
    ```
@@ -96,7 +97,7 @@ Anything that did not survive review was deleted rather than patched around — 
 | `GeoFenceCalculatorTest` | 5 | Haversine distance; inside / exact 50 m boundary / outside; custom radius |
 | `TimeValidatorTest` | 5 | Shift boundaries (08:59, 09:00, 18:00, 18:01) and simulation bypass |
 | `ValidateAttendanceEligibilityUseCaseTest` | 7 | Full eligibility matrix (unset office, already marked, out of range, out of hours, bypass, eligible) |
-| `AttendanceViewModelTest` | 7 | MVI intent→state transitions: permissions, GPS disabled/re-enabled refresh, map targeting, save office, mark attendance, simulation toggle, reset |
+| `AttendanceViewModelTest` | 8 | MVI intent→state transitions: permissions, GPS disabled/re-enabled refresh, pause/resume tracking, map targeting, save office, mark attendance, simulation toggle, reset |
 
 5. **Build a release APK** (output: `app/build/outputs/apk/release/`):
    ```bash

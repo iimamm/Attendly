@@ -99,6 +99,18 @@ class AttendanceViewModelTest {
     }
 
     @Test
+    fun pauseLocationTracking_stopsAndResumeRestartsTracking() = runTest {
+        advanceUntilIdle()
+        val callsAfterInit = fakeLocationTracker.getCurrentLocationCalls
+
+        viewModel.onIntent(AttendanceIntent.PauseLocationTracking)
+        viewModel.onIntent(AttendanceIntent.RefreshLocationState)
+        advanceUntilIdle()
+
+        assertEquals(callsAfterInit + 1, fakeLocationTracker.getCurrentLocationCalls)
+    }
+
+    @Test
     fun onMapCameraMoved_updatesTargetOfficeLocation() = runTest {
         advanceUntilIdle()
 

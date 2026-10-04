@@ -13,9 +13,15 @@ class FakeLocationTracker(
 
     val locationFlow = MutableStateFlow(initialLocation)
 
+    var getCurrentLocationCalls = 0
+        private set
+
     override val locationUpdates: Flow<LocationModel> = locationFlow
 
-    override suspend fun getCurrentLocation(): LocationModel? = locationFlow.value
+    override suspend fun getCurrentLocation(): LocationModel? {
+        getCurrentLocationCalls++
+        return locationFlow.value
+    }
 
     override fun hasLocationPermission(): Boolean = hasPermission
 

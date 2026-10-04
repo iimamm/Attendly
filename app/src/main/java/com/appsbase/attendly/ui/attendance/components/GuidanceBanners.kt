@@ -27,18 +27,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.appsbase.attendly.R
-import com.appsbase.attendly.ui.attendance.AttendanceState
 import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.WarningAmber
 import com.appsbase.attendly.ui.theme.WarningContainer
 
 @Composable
 internal fun GuidanceBanners(
-    state: AttendanceState,
+    hasLocationPermission: Boolean,
+    isGpsEnabled: Boolean,
     onRequestPermission: () -> Unit,
-    onEnableGps: () -> Unit,
+    onEnableGps: () -> Unit
 ) {
-    if (!state.hasLocationPermission) {
+    if (!hasLocationPermission) {
         GuidanceBanner(
             icon = Icons.Default.Warning,
             titleRes = R.string.permission_required_title,
@@ -49,7 +49,7 @@ internal fun GuidanceBanners(
         Spacer(Modifier.height(20.dp))
     }
 
-    if (state.hasLocationPermission && !state.isGpsEnabled) {
+    if (hasLocationPermission && !isGpsEnabled) {
         GuidanceBanner(
             icon = Icons.Default.LocationOff,
             titleRes = R.string.gps_disabled_title,
@@ -63,7 +63,11 @@ internal fun GuidanceBanners(
 
 @Composable
 private fun GuidanceBanner(
-    icon: ImageVector, titleRes: Int, messageRes: Int, actionLabelRes: Int, onAction: () -> Unit
+    icon: ImageVector,
+    titleRes: Int,
+    messageRes: Int,
+    actionLabelRes: Int,
+    onAction: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -73,7 +77,9 @@ private fun GuidanceBanner(
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = icon, contentDescription = null, tint = WarningAmber
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = WarningAmber
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -97,7 +103,8 @@ private fun GuidanceBanner(
                 colors = ButtonDefaults.buttonColors(containerColor = WarningAmber)
             ) {
                 Text(
-                    text = stringResource(actionLabelRes), color = Color.White
+                    text = stringResource(actionLabelRes),
+                    color = Color.White
                 )
             }
         }
@@ -109,9 +116,11 @@ private fun GuidanceBanner(
 private fun PermissionBannerPreview() {
     AttendlyTheme {
         GuidanceBanners(
-            state = AttendanceState(hasLocationPermission = false),
+            hasLocationPermission = false,
+            isGpsEnabled = true,
             onRequestPermission = {},
-            onEnableGps = {})
+            onEnableGps = {}
+        )
     }
 }
 
@@ -120,9 +129,10 @@ private fun PermissionBannerPreview() {
 private fun GpsDisabledBannerPreview() {
     AttendlyTheme {
         GuidanceBanners(
-            state = AttendanceState(hasLocationPermission = true, isGpsEnabled = false),
+            hasLocationPermission = true,
+            isGpsEnabled = false,
             onRequestPermission = {},
-            onEnableGps = {},
+            onEnableGps = {}
         )
     }
 }

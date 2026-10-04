@@ -99,23 +99,26 @@ class AttendanceViewModel @Inject constructor(
     /**
      * Re-reads permission and GPS provider state (dispatched when the app resumes,
      * e.g. after the user returns from system settings) and restarts tracking if
-     * either flag flipped to available.
+     * it is not running (paused on stop, or ended by a revoked permission).
      */
     private fun refreshLocationState() {
         val hasPermission = locationTracker.hasLocationPermission()
         val gpsEnabled = locationTracker.isGpsEnabled()
-        val stateChanged = hasPermission != _state.value.hasLocationPermission ||
-                gpsEnabled != _state.value.isGpsEnabled
 
         _state.update {
             it.copy(hasLocationPermission = hasPermission, isGpsEnabled = gpsEnabled)
         }
 
-        if (hasPermission) {
-            if (stateChanged) startLocationTracking()
-        } else {
+        if (!hasPermission) {
             locationUpdatesJob?.cancel()
+        } else if (locationUpdatesJob?.isActive != true) {
+            startLocationTracking()
         }
+    }
+
+    private fun pauseLocationTracking() {
+        locationUpdatesJob?.cancel()
+        locationUpdatesJob = null
     }
 
     private fun startLocationTracking() {
@@ -169,6 +172,8 @@ class AttendanceViewModel @Inject constructor(
         when (intent) {
             is AttendanceIntent.RefreshLocationState -> refreshLocationState()
 
+            is AttendanceIntent.PauseLocationTracking -> pauseLocationTracking()
+
             is AttendanceIntent.PermissionResultReceived -> {
                 _state.update { it.copy(hasLocationPermission = intent.isGranted) }
                 if (intent.isGranted) {
@@ -177,7 +182,13 @@ class AttendanceViewModel @Inject constructor(
             }
 
             is AttendanceIntent.MapCameraMoved -> {
-                _state.update { it.copy(targetOfficeLocation = intent.centerLocation) }
+                _state.update { current ->
+                    if (current.targetOfficeLocation == intent.centerLocation) {
+                        current
+                    } else {
+                        current.copy(targetOfficeLocation = intent.centerLocation)
+                    }
+                }
             }
 
             is AttendanceIntent.CenterMapOnCurrentLocation -> {

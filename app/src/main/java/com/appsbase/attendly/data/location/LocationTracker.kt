@@ -104,7 +104,7 @@ class DefaultLocationTracker @Inject constructor(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 cancellationTokenSource.token
             )
-            task.awaitTask()?.let {
+            task.awaitTask(onCancel = { cancellationTokenSource.cancel() })?.let {
                 LocationModel(
                     latitude = it.latitude,
                     longitude = it.longitude,
@@ -119,14 +119,18 @@ class DefaultLocationTracker @Inject constructor(
     }
 }
 
-private suspend fun <T> Task<T>.awaitTask(): T? = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { result ->
-        if (cont.isActive) cont.resume(result)
+private suspend fun <T> Task<T>.awaitTask(onCancel: (() -> Unit)? = null): T? =
+    suspendCancellableCoroutine { cont ->
+        addOnSuccessListener { result ->
+            if (cont.isActive) cont.resume(result)
+        }
+        addOnFailureListener {
+            if (cont.isActive) cont.resume(null)
+        }
+        addOnCanceledListener {
+            if (cont.isActive) cont.cancel()
+        }
+        if (onCancel != null) {
+            cont.invokeOnCancellation { onCancel() }
+        }
     }
-    addOnFailureListener {
-        if (cont.isActive) cont.resume(null)
-    }
-    addOnCanceledListener {
-        if (cont.isActive) cont.cancel()
-    }
-}

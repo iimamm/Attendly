@@ -34,8 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.appsbase.attendly.R
 import com.appsbase.attendly.domain.model.AttendanceRecord
 import com.appsbase.attendly.domain.model.AttendanceStatus
-import com.appsbase.attendly.domain.model.OfficeLocation
-import com.appsbase.attendly.ui.attendance.AttendanceState
 import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.DisabledButton
 import com.appsbase.attendly.ui.theme.DisabledTextGrey
@@ -48,13 +46,19 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+private val CaptionTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+
 @Composable
 internal fun MarkAttendanceSection(
-    state: AttendanceState,
-    onMarkAttendance: () -> Unit,
+    eligibilityStatus: AttendanceStatus,
+    todayAttendance: AttendanceRecord?,
+    isMarking: Boolean,
+    isSimulationActive: Boolean,
+    checkInWindow: String,
+    onMarkAttendance: () -> Unit
 ) {
-    val alreadyMarked = state.todayAttendance != null
-    val isEligible = state.eligibilityStatus == AttendanceStatus.ELIGIBLE
+    val alreadyMarked = todayAttendance != null
+    val isEligible = eligibilityStatus == AttendanceStatus.ELIGIBLE
     val dashColor = LabelGrey.copy(alpha = 0.5f)
 
     Column(
@@ -81,13 +85,19 @@ internal fun MarkAttendanceSection(
         Spacer(Modifier.height(20.dp))
 
         MarkAttendanceButton(
-            state = state,
-            onMarkAttendance = onMarkAttendance
+            isEligible = isEligible,
+            alreadyMarked = alreadyMarked,
+            isMarking = isMarking,
+            onClick = onMarkAttendance
         )
 
         Spacer(Modifier.height(14.dp))
 
-        SectionCaption(state = state)
+        SectionCaption(
+            todayAttendance = todayAttendance,
+            isSimulationActive = isSimulationActive,
+            checkInWindow = checkInWindow
+        )
     }
 }
 
@@ -113,15 +123,14 @@ private fun SectionHeaderIcon(alreadyMarked: Boolean, isEligible: Boolean) {
 
 @Composable
 private fun MarkAttendanceButton(
-    state: AttendanceState,
-    onMarkAttendance: () -> Unit
+    isEligible: Boolean,
+    alreadyMarked: Boolean,
+    isMarking: Boolean,
+    onClick: () -> Unit
 ) {
-    val alreadyMarked = state.todayAttendance != null
-    val isEligible = state.eligibilityStatus == AttendanceStatus.ELIGIBLE
-
     Button(
-        onClick = onMarkAttendance,
-        enabled = isEligible && !state.isMarkingAttendance,
+        onClick = onClick,
+        enabled = isEligible && !isMarking,
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp),
@@ -138,12 +147,11 @@ private fun MarkAttendanceButton(
         )
     ) {
         when {
-            state.isMarkingAttendance -> CircularProgressIndicator(
+            isMarking -> CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 color = Color.White,
                 strokeWidth = 2.dp
             )
-
             alreadyMarked -> {
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
@@ -157,7 +165,6 @@ private fun MarkAttendanceButton(
                     fontWeight = FontWeight.Bold
                 )
             }
-
             else -> Text(
                 text = stringResource(R.string.mark_attendance),
                 fontSize = 17.sp,
@@ -168,20 +175,18 @@ private fun MarkAttendanceButton(
 }
 
 @Composable
-private fun SectionCaption(state: AttendanceState) {
+private fun SectionCaption(
+    todayAttendance: AttendanceRecord?,
+    isSimulationActive: Boolean,
+    checkInWindow: String
+) {
     val captionText = when {
-        state.todayAttendance != null -> stringResource(
+        todayAttendance != null -> stringResource(
             R.string.caption_marked_at,
-            formatTime(state.todayAttendance.timestamp)
+            formatTime(todayAttendance.timestamp)
         )
-
-        state.simulationConfig.bypassTimeValidation ->
-            stringResource(R.string.caption_any_time)
-
-        else -> stringResource(
-            R.string.caption_available_window,
-            state.checkInWindow
-        )
+        isSimulationActive -> stringResource(R.string.caption_any_time)
+        else -> stringResource(R.string.caption_available_window, checkInWindow)
     }
     Text(
         text = captionText,
@@ -195,18 +200,7 @@ private fun SectionCaption(state: AttendanceState) {
 private fun formatTime(epochMillis: Long): String =
     Instant.ofEpochMilli(epochMillis)
         .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("hh:mm a"))
-
-private fun sectionPreviewState(
-    eligibilityStatus: AttendanceStatus,
-    todayAttendance: AttendanceRecord? = null
-): AttendanceState = AttendanceState(
-    officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
-    eligibilityStatus = eligibilityStatus,
-    isWithinGeofence = eligibilityStatus == AttendanceStatus.ELIGIBLE,
-    todayAttendance = todayAttendance,
-    checkInWindow = "09:00 AM – 06:00 PM"
-)
+        .format(CaptionTimeFormatter)
 
 private val previewRecord = AttendanceRecord(
     id = "preview-record",
@@ -219,18 +213,17 @@ private val previewRecord = AttendanceRecord(
     distanceMeters = 8
 )
 
-@Preview(
-    showBackground = true,
-    widthDp = 390,
-    heightDp = 320,
-    name = "Check-in — locked (out of range)"
-)
+@Preview(showBackground = true, widthDp = 390, heightDp = 320, name = "Check-in — locked (out of range)")
 @Composable
 private fun MarkAttendanceLockedPreview() {
     AttendlyTheme {
         MarkAttendanceSection(
-            state = sectionPreviewState(AttendanceStatus.OUTSIDE_GEOFENCE),
-            onMarkAttendance = {},
+            eligibilityStatus = AttendanceStatus.OUTSIDE_GEOFENCE,
+            todayAttendance = null,
+            isMarking = false,
+            isSimulationActive = false,
+            checkInWindow = "09:00 AM – 06:00 PM",
+            onMarkAttendance = {}
         )
     }
 }
@@ -240,8 +233,12 @@ private fun MarkAttendanceLockedPreview() {
 private fun MarkAttendanceEligiblePreview() {
     AttendlyTheme {
         MarkAttendanceSection(
-            state = sectionPreviewState(AttendanceStatus.ELIGIBLE),
-            onMarkAttendance = {},
+            eligibilityStatus = AttendanceStatus.ELIGIBLE,
+            todayAttendance = null,
+            isMarking = false,
+            isSimulationActive = false,
+            checkInWindow = "09:00 AM – 06:00 PM",
+            onMarkAttendance = {}
         )
     }
 }
@@ -251,11 +248,12 @@ private fun MarkAttendanceEligiblePreview() {
 private fun MarkAttendanceMarkedPreview() {
     AttendlyTheme {
         MarkAttendanceSection(
-            state = sectionPreviewState(
-                AttendanceStatus.ALREADY_MARKED,
-                todayAttendance = previewRecord
-            ),
-            onMarkAttendance = {},
+            eligibilityStatus = AttendanceStatus.ALREADY_MARKED,
+            todayAttendance = previewRecord,
+            isMarking = false,
+            isSimulationActive = false,
+            checkInWindow = "09:00 AM – 06:00 PM",
+            onMarkAttendance = {}
         )
     }
 }

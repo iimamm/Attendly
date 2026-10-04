@@ -30,6 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appsbase.attendly.domain.model.AttendanceRecord
@@ -96,6 +98,10 @@ fun AttendanceScreen(
         onPauseOrDispose { }
     }
 
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.onIntent(AttendanceIntent.PauseLocationTracking)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
@@ -120,8 +126,12 @@ fun AttendanceScreen(
         }
     }
 
+    var centeredOnFirstFix by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.currentLocation) {
         val currentLoc = state.currentLocation ?: return@LaunchedEffect
+        if (centeredOnFirstFix) return@LaunchedEffect
+        centeredOnFirstFix = true
         if (state.officeLocation == null) {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(
                 LatLng(currentLoc.latitude, currentLoc.longitude),
@@ -184,7 +194,8 @@ private fun AttendanceContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             AttendanceTopBar(
-                state = state,
+                isSimulationActive = state.simulationConfig.bypassTimeValidation,
+                historyCount = state.attendanceHistory.size,
                 onBack = onBack,
                 onToggleSimulation = { onIntent(AttendanceIntent.ToggleTimeSimulation) },
                 onShowHistory = { onIntent(AttendanceIntent.ShowHistorySheet(true)) },
@@ -202,7 +213,8 @@ private fun AttendanceContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             GuidanceBanners(
-                state = state,
+                hasLocationPermission = state.hasLocationPermission,
+                isGpsEnabled = state.isGpsEnabled,
                 onRequestPermission = onRequestPermission,
                 onEnableGps = {
                     context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
@@ -210,7 +222,10 @@ private fun AttendanceContent(
             )
 
             OfficeContextCard(
-                state = state,
+                officeLocation = state.officeLocation,
+                targetOfficeLocation = state.targetOfficeLocation,
+                hasLocationPermission = state.hasLocationPermission,
+                isSavingOffice = state.isSavingOffice,
                 cameraPositionState = cameraPositionState,
                 onSaveOfficeLocation = { onIntent(AttendanceIntent.SaveOfficeLocationClicked) },
                 onCenterOnMyLocation = { onIntent(AttendanceIntent.CenterMapOnCurrentLocation) }
@@ -225,16 +240,24 @@ private fun AttendanceContent(
 
             Spacer(Modifier.height(14.dp))
 
-            RangeStatusChip(state = state)
+            RangeStatusChip(
+                isOfficeSet = state.officeLocation?.isSet == true,
+                isWithinGeofence = state.isWithinGeofence,
+                isMarkedToday = state.todayAttendance != null
+            )
 
             Spacer(Modifier.height(8.dp))
 
-            StatusHint(state = state)
+            StatusHint(status = state.eligibilityStatus)
 
             Spacer(Modifier.height(36.dp))
 
             MarkAttendanceSection(
-                state = state,
+                eligibilityStatus = state.eligibilityStatus,
+                todayAttendance = state.todayAttendance,
+                isMarking = state.isMarkingAttendance,
+                isSimulationActive = state.simulationConfig.bypassTimeValidation,
+                checkInWindow = state.checkInWindow,
                 onMarkAttendance = { onIntent(AttendanceIntent.MarkAttendanceClicked) }
             )
         }

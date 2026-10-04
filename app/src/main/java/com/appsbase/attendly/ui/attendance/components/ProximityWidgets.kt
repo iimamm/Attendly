@@ -29,11 +29,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appsbase.attendly.R
-import com.appsbase.attendly.domain.model.AttendanceRecord
 import com.appsbase.attendly.domain.model.AttendanceStatus
-import com.appsbase.attendly.domain.model.OfficeLocation
 import com.appsbase.attendly.domain.util.GeoFenceCalculator
-import com.appsbase.attendly.ui.attendance.AttendanceState
 import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.DangerContainer
 import com.appsbase.attendly.ui.theme.DangerRed
@@ -42,21 +39,6 @@ import com.appsbase.attendly.ui.theme.LabelGrey
 import com.appsbase.attendly.ui.theme.SuccessContainer
 import com.appsbase.attendly.ui.theme.SuccessGreen
 import com.appsbase.attendly.ui.theme.TrackGrey
-import java.time.LocalDateTime
-import java.time.ZoneId
-
-private val PreviewOffice = OfficeLocation(23.8103, 90.4125, isSet = true)
-
-private val PreviewMarkedRecord = AttendanceRecord(
-    id = "preview-record",
-    timestamp = LocalDateTime.of(2026, 10, 4, 10, 30)
-        .atZone(ZoneId.systemDefault())
-        .toInstant()
-        .toEpochMilli(),
-    latitude = 23.8104,
-    longitude = 90.4125,
-    distanceMeters = 8
-)
 
 @Composable
 internal fun DistanceRing(distanceMeters: Int?, inRange: Boolean) {
@@ -117,14 +99,15 @@ internal fun DistanceRing(distanceMeters: Int?, inRange: Boolean) {
 }
 
 @Composable
-internal fun RangeStatusChip(state: AttendanceState) {
-    val officeSet = state.officeLocation?.isSet == true
+internal fun RangeStatusChip(
+    isOfficeSet: Boolean,
+    isWithinGeofence: Boolean,
+    isMarkedToday: Boolean
+) {
     val (labelRes, color, bg) = when {
-        !officeSet -> Triple(R.string.chip_office_unset, LabelGrey, TrackGrey)
-        state.todayAttendance != null ->
-            Triple(R.string.chip_marked_today, SuccessGreen, SuccessContainer)
-        state.isWithinGeofence ->
-            Triple(R.string.chip_in_range, SuccessGreen, SuccessContainer)
+        !isOfficeSet -> Triple(R.string.chip_office_unset, LabelGrey, TrackGrey)
+        isMarkedToday -> Triple(R.string.chip_marked_today, SuccessGreen, SuccessContainer)
+        isWithinGeofence -> Triple(R.string.chip_in_range, SuccessGreen, SuccessContainer)
         else -> Triple(R.string.chip_out_of_range, DangerRed, DangerContainer)
     }
 
@@ -153,8 +136,8 @@ internal fun RangeStatusChip(state: AttendanceState) {
 }
 
 @Composable
-internal fun StatusHint(state: AttendanceState) {
-    val hintText = when (state.eligibilityStatus) {
+internal fun StatusHint(status: AttendanceStatus) {
+    val hintText = when (status) {
         AttendanceStatus.OFFICE_NOT_SET ->
             stringResource(R.string.attendance_disabled_unset_reason)
         AttendanceStatus.OUTSIDE_GEOFENCE ->
@@ -201,25 +184,13 @@ private fun DistanceRingInPreview() {
 private fun RangeStatusChipGalleryPreview() {
     AttendlyTheme {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            RangeStatusChip(state = AttendanceState())
+            RangeStatusChip(isOfficeSet = false, isWithinGeofence = false, isMarkedToday = false)
             Spacer(Modifier.height(8.dp))
-            RangeStatusChip(
-                state = AttendanceState(
-                    officeLocation = PreviewOffice,
-                    isWithinGeofence = true
-                )
-            )
+            RangeStatusChip(isOfficeSet = true, isWithinGeofence = true, isMarkedToday = false)
             Spacer(Modifier.height(8.dp))
-            RangeStatusChip(
-                state = AttendanceState(officeLocation = PreviewOffice)
-            )
+            RangeStatusChip(isOfficeSet = true, isWithinGeofence = false, isMarkedToday = false)
             Spacer(Modifier.height(8.dp))
-            RangeStatusChip(
-                state = AttendanceState(
-                    officeLocation = PreviewOffice,
-                    todayAttendance = PreviewMarkedRecord
-                )
-            )
+            RangeStatusChip(isOfficeSet = true, isWithinGeofence = true, isMarkedToday = true)
         }
     }
 }
@@ -229,30 +200,13 @@ private fun RangeStatusChipGalleryPreview() {
 private fun StatusHintGalleryPreview() {
     AttendlyTheme {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            StatusHint(state = AttendanceState())
+            StatusHint(status = AttendanceStatus.OFFICE_NOT_SET)
             Spacer(Modifier.height(8.dp))
-            StatusHint(
-                state = AttendanceState(
-                    officeLocation = PreviewOffice,
-                    eligibilityStatus = AttendanceStatus.OUTSIDE_GEOFENCE,
-                    distanceMeters = 120
-                )
-            )
+            StatusHint(status = AttendanceStatus.OUTSIDE_GEOFENCE)
             Spacer(Modifier.height(8.dp))
-            StatusHint(
-                state = AttendanceState(
-                    officeLocation = PreviewOffice,
-                    eligibilityStatus = AttendanceStatus.OUTSIDE_TIME_WINDOW
-                )
-            )
+            StatusHint(status = AttendanceStatus.OUTSIDE_TIME_WINDOW)
             Spacer(Modifier.height(8.dp))
-            StatusHint(
-                state = AttendanceState(
-                    officeLocation = PreviewOffice,
-                    eligibilityStatus = AttendanceStatus.ELIGIBLE,
-                    isWithinGeofence = true
-                )
-            )
+            StatusHint(status = AttendanceStatus.ELIGIBLE)
         }
     }
 }

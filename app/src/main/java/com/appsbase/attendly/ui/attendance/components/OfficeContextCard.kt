@@ -43,7 +43,6 @@ import com.appsbase.attendly.R
 import com.appsbase.attendly.domain.model.LocationModel
 import com.appsbase.attendly.domain.model.OfficeLocation
 import com.appsbase.attendly.domain.util.GeoFenceCalculator
-import com.appsbase.attendly.ui.attendance.AttendanceState
 import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.LabelGrey
 import com.appsbase.attendly.ui.theme.PrimaryBlue
@@ -57,17 +56,20 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
 
 @Composable
 internal fun OfficeContextCard(
-    state: AttendanceState,
+    officeLocation: OfficeLocation?,
+    targetOfficeLocation: LocationModel?,
+    hasLocationPermission: Boolean,
+    isSavingOffice: Boolean,
     cameraPositionState: CameraPositionState,
     onSaveOfficeLocation: () -> Unit,
-    onCenterOnMyLocation: () -> Unit,
+    onCenterOnMyLocation: () -> Unit
 ) {
-    val isOfficeSet = state.officeLocation?.isSet == true
+    val isOfficeSet = officeLocation?.isSet == true
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -81,7 +83,9 @@ internal fun OfficeContextCard(
             Spacer(Modifier.height(16.dp))
 
             OfficeMap(
-                state = state,
+                officeLocation = officeLocation,
+                targetOfficeLocation = targetOfficeLocation,
+                hasLocationPermission = hasLocationPermission,
                 cameraPositionState = cameraPositionState,
                 onCenterOnMyLocation = onCenterOnMyLocation
             )
@@ -99,7 +103,7 @@ internal fun OfficeContextCard(
 
             SaveOfficeButton(
                 isOfficeSet = isOfficeSet,
-                isSaving = state.isSavingOffice,
+                isSaving = isSavingOffice,
                 onClick = onSaveOfficeLocation
             )
         }
@@ -171,7 +175,9 @@ private fun SaveOfficeButton(
 
 @Composable
 private fun OfficeMap(
-    state: AttendanceState,
+    officeLocation: OfficeLocation?,
+    targetOfficeLocation: LocationModel?,
+    hasLocationPermission: Boolean,
     cameraPositionState: CameraPositionState,
     onCenterOnMyLocation: () -> Unit
 ) {
@@ -191,14 +197,14 @@ private fun OfficeMap(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = state.hasLocationPermission),
+                properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                 uiSettings = MapUiSettings(
                     myLocationButtonEnabled = false,
                     zoomControlsEnabled = false,
                     compassEnabled = true
                 )
             ) {
-                state.officeLocation?.let { office -> OfficeGeofenceOverlay(office) }
+                officeLocation?.let { OfficeGeofenceOverlay(it) }
             }
         }
 
@@ -220,7 +226,7 @@ private fun OfficeMap(
         )
 
         CoordinatesPill(
-            location = state.targetOfficeLocation,
+            location = targetOfficeLocation,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 17.dp)
@@ -238,7 +244,10 @@ private fun OfficeGeofenceOverlay(office: OfficeLocation) {
         fillColor = PrimaryBlue.copy(alpha = 0.18f)
     )
     Marker(
-        state = MarkerState(position = LatLng(office.latitude, office.longitude)),
+        state = rememberMarkerState(
+            key = "${office.latitude},${office.longitude}",
+            position = LatLng(office.latitude, office.longitude)
+        ),
         title = stringResource(R.string.office_marker_title),
         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
     )
@@ -294,7 +303,7 @@ private fun CoordinatesPill(
                 ),
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -305,15 +314,15 @@ private fun CoordinatesPill(
 private fun OfficeContextCardUnsetPreview() {
     AttendlyTheme {
         OfficeContextCard(
-            state = AttendanceState(
-                targetOfficeLocation = LocationModel(23.8103, 90.4125),
-                hasLocationPermission = true
-            ),
+            officeLocation = null,
+            targetOfficeLocation = LocationModel(23.8103, 90.4125),
+            hasLocationPermission = true,
+            isSavingOffice = false,
             cameraPositionState = rememberCameraPositionState {
                 position = CameraPosition.fromLatLngZoom(LatLng(23.8103, 90.4125), 17f)
             },
             onSaveOfficeLocation = {},
-            onCenterOnMyLocation = {},
+            onCenterOnMyLocation = {}
         )
     }
 }
@@ -323,16 +332,15 @@ private fun OfficeContextCardUnsetPreview() {
 private fun OfficeContextCardSetPreview() {
     AttendlyTheme {
         OfficeContextCard(
-            state = AttendanceState(
-                officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
-                targetOfficeLocation = LocationModel(23.8103, 90.4125),
-                hasLocationPermission = true
-            ),
+            officeLocation = OfficeLocation(23.8103, 90.4125, isSet = true),
+            targetOfficeLocation = LocationModel(23.8103, 90.4125),
+            hasLocationPermission = true,
+            isSavingOffice = false,
             cameraPositionState = rememberCameraPositionState {
                 position = CameraPosition.fromLatLngZoom(LatLng(23.8103, 90.4125), 17f)
             },
             onSaveOfficeLocation = {},
-            onCenterOnMyLocation = {},
+            onCenterOnMyLocation = {}
         )
     }
 }

@@ -27,6 +27,7 @@ data class AttendanceState(
 
 sealed interface AttendanceIntent {
     data object RefreshLocationState : AttendanceIntent
+    data object PauseLocationTracking : AttendanceIntent
     data class PermissionResultReceived(val isGranted: Boolean) : AttendanceIntent
     data class MapCameraMoved(val centerLocation: LocationModel) : AttendanceIntent
     data object CenterMapOnCurrentLocation : AttendanceIntent

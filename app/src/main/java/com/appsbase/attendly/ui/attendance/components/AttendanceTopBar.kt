@@ -37,8 +37,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appsbase.attendly.R
-import com.appsbase.attendly.domain.model.SimulationConfig
-import com.appsbase.attendly.ui.attendance.AttendanceState
 import com.appsbase.attendly.ui.theme.AttendlyTheme
 import com.appsbase.attendly.ui.theme.DangerRed
 import com.appsbase.attendly.ui.theme.SuccessGreen
@@ -49,7 +47,8 @@ import com.appsbase.attendly.ui.theme.WarningContainer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AttendanceTopBar(
-    state: AttendanceState,
+    isSimulationActive: Boolean,
+    historyCount: Int,
     onBack: () -> Unit,
     onToggleSimulation: () -> Unit,
     onShowHistory: () -> Unit,
@@ -75,7 +74,7 @@ internal fun AttendanceTopBar(
             }
         },
         actions = {
-            if (state.simulationConfig.bypassTimeValidation) {
+            if (isSimulationActive) {
                 SimulationBadge()
             }
             IconButton(onClick = { showMenu = !showMenu }) {
@@ -87,7 +86,8 @@ internal fun AttendanceTopBar(
             OverflowMenu(
                 expanded = showMenu,
                 onDismiss = { showMenu = false },
-                state = state,
+                isSimulationActive = isSimulationActive,
+                historyCount = historyCount,
                 onToggleSimulation = onToggleSimulation,
                 onShowHistory = onShowHistory,
                 onShowResetDialog = onShowResetDialog
@@ -128,7 +128,8 @@ private fun SimulationBadge() {
 private fun OverflowMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
-    state: AttendanceState,
+    isSimulationActive: Boolean,
+    historyCount: Int,
     onToggleSimulation: () -> Unit,
     onShowHistory: () -> Unit,
     onShowResetDialog: () -> Unit
@@ -138,11 +139,8 @@ private fun OverflowMenu(
             text = {
                 Text(
                     text = stringResource(
-                        if (state.simulationConfig.bypassTimeValidation) {
-                            R.string.menu_disable_simulation
-                        } else {
-                            R.string.menu_bypass_time
-                        }
+                        if (isSimulationActive) R.string.menu_disable_simulation
+                        else R.string.menu_bypass_time
                     )
                 )
             },
@@ -152,17 +150,11 @@ private fun OverflowMenu(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = if (state.simulationConfig.bypassTimeValidation) {
-                        Icons.Default.Check
-                    } else {
-                        Icons.Default.Science
-                    },
+                    imageVector = if (isSimulationActive) Icons.Default.Check
+                    else Icons.Default.Science,
                     contentDescription = null,
-                    tint = if (state.simulationConfig.bypassTimeValidation) {
-                        SuccessGreen
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
+                    tint = if (isSimulationActive) SuccessGreen
+                    else MaterialTheme.colorScheme.onSurface
                 )
             }
         )
@@ -170,8 +162,7 @@ private fun OverflowMenu(
         DropdownMenuItem(
             text = {
                 Text(
-                    text = stringResource(R.string.menu_view_history) +
-                            " (${state.attendanceHistory.size})"
+                    text = stringResource(R.string.menu_view_history) + " ($historyCount)"
                 )
             },
             onClick = {
@@ -210,7 +201,8 @@ private fun OverflowMenu(
 private fun AttendanceTopBarPreview() {
     AttendlyTheme {
         AttendanceTopBar(
-            state = AttendanceState(),
+            isSimulationActive = false,
+            historyCount = 2,
             onBack = {},
             onToggleSimulation = {},
             onShowHistory = {},
@@ -224,9 +216,8 @@ private fun AttendanceTopBarPreview() {
 private fun AttendanceTopBarSimulationPreview() {
     AttendlyTheme {
         AttendanceTopBar(
-            state = AttendanceState(
-                simulationConfig = SimulationConfig(bypassTimeValidation = true)
-            ),
+            isSimulationActive = true,
+            historyCount = 2,
             onBack = {},
             onToggleSimulation = {},
             onShowHistory = {},
